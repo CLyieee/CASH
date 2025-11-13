@@ -1,0 +1,90 @@
+{
+  "project_info": {
+    "project_number": "381165185453",
+    "project_id": "cashg-2b54c",
+    "storage_bucket": "cashg-2b54c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:381165185453:android:25029d8158db94a3d09924",
+        "android_client_info": {
+          "package_name": "com.cashg.gcash"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "381165185453-g5k5a7fqkqgl3h7sng2b701m2etj337l.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJx-G3fM-YsRUJuRmSHMCbE9TCB7Jsxf0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "381165185453-g5k5a7fqkqgl3h7sng2b701m2etj337l.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "381165185453-8mm6p4vh56210a1l7nd04n9kq6g62ib0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.gcash"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:381165185453:android:c80ecabea60a4ec7d09924",
+        "android_client_info": {
+          "package_name": "com.example.g"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "381165185453-20s3qrgu9q0ia6tn4divs2smrelhb6k7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.g",
+            "certificate_hash": "014591e0f57217626f7c49fe12710836dad752ce"
+          }
+        },
+        {
+          "client_id": "381165185453-g5k5a7fqkqgl3h7sng2b701m2etj337l.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJx-G3fM-YsRUJuRmSHMCbE9TCB7Jsxf0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "381165185453-g5k5a7fqkqgl3h7sng2b701m2etj337l.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "381165185453-8mm6p4vh56210a1l7nd04n9kq6g62ib0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.gcash"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
