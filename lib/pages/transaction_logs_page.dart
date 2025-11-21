@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../controllers/app_controller.dart';
 import '../services/transaction_service.dart';
 import '../models/transaction_model.dart';
-import 'transaction_page.dart';
+// import 'transaction_page.dart';
 
 class TransactionLogsPage extends StatefulWidget {
   const TransactionLogsPage({super.key});
@@ -124,36 +124,36 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
                   ),
 
                   // Add New Transaction Button
-                  GestureDetector(
-                    onTap: () {
-                      Get.to(
-                        () => const TransactionFormPage(),
-                        transition: Transition.rightToLeft,
-                        duration: const Duration(milliseconds: 300),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF64B5F6), Color(0xFF42A5F5)],
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF64B5F6).withOpacity(0.4),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.add_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ),
+                  // GestureDetector(
+                  //   onTap: () {
+                  //     Get.to(
+                  //       () => const TransactionFormPage(),
+                  //       transition: Transition.rightToLeft,
+                  //       duration: const Duration(milliseconds: 300),
+                  //     );
+                  //   },
+                  //   child: Container(
+                  //     padding: const EdgeInsets.all(12),
+                  //     decoration: BoxDecoration(
+                  //       gradient: const LinearGradient(
+                  //         colors: [Color(0xFF64B5F6), Color(0xFF42A5F5)],
+                  //       ),
+                  //       shape: BoxShape.circle,
+                  //       boxShadow: [
+                  //         BoxShadow(
+                  //           color: const Color(0xFF64B5F6).withOpacity(0.4),
+                  //           blurRadius: 12,
+                  //           offset: const Offset(0, 4),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //     child: const Icon(
+                  //       Icons.add_rounded,
+                  //       color: Colors.white,
+                  //       size: 24,
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.3, end: 0),
             ),

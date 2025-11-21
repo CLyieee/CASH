@@ -14,6 +14,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static const String _biometricPrefKey = 'biometric_enabled';
   final BiometricAuthService _biometricService = BiometricAuthService();
   final AppController controller = Get.find<AppController>();
   bool _isBiometricAvailable = false;
@@ -33,7 +34,7 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       final isAvailable = await _biometricService.isBiometricAvailable();
       final prefs = await SharedPreferences.getInstance();
-      final isEnabled = prefs.getBool('biometric_enabled') ?? false;
+      final isEnabled = prefs.getBool(_biometricPrefKey) ?? false;
 
       if (mounted) {
         setState(() {
@@ -64,7 +65,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
         if (authenticated) {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('biometric_enabled', true);
+          await prefs.setBool(_biometricPrefKey, true);
           if (mounted) {
             setState(() {
               _isBiometricEnabled = true;
@@ -94,7 +95,7 @@ class _SettingsPageState extends State<SettingsPage> {
       } else {
         // Disabling biometric
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('biometric_enabled', false);
+        await prefs.setBool(_biometricPrefKey, false);
         if (mounted) {
           setState(() {
             _isBiometricEnabled = false;
@@ -162,7 +163,12 @@ class _SettingsPageState extends State<SettingsPage> {
           TextButton(
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
+              final shouldKeepBiometric =
+                  prefs.getBool(_biometricPrefKey) ?? false;
               await prefs.clear();
+              if (shouldKeepBiometric) {
+                await prefs.setBool(_biometricPrefKey, true);
+              }
               Get.offAll(() => const LoginSelectionPage());
             },
             child: Text(
