@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../controllers/gemini_controller.dart';
-import '../controllers/theme_controller.dart';
 import '../utils/app_text.dart';
 
 class _AIChatPalette {
@@ -156,11 +154,33 @@ class _AIChatPageState extends State<AIChatPage> {
                                   letterSpacing: -0.5,
                                 ),
                               ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: palette.accentBlue.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: palette.accentBlue.withOpacity(0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Text(
+                                  'BETA',
+                                  style: AppText.poppins(
+                                    color: palette.accentBlue,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Powered by Gemini AI',
+                            'Powered by AI',
                             style: AppText.poppins(
                               color: palette.textSecondary,
                               fontSize: 13,
@@ -241,6 +261,8 @@ class _AIChatPageState extends State<AIChatPage> {
                               textAlign: TextAlign.center,
                             ),
                           ),
+                          const SizedBox(height: 32),
+                          _buildSuggestions(palette),
                         ],
                       ),
                     );
@@ -336,6 +358,97 @@ class _AIChatPageState extends State<AIChatPage> {
                   );
                 }
                 return const SizedBox.shrink();
+              }),
+
+              // Pending action confirmation
+              Obx(() {
+                final pending = geminiController.pendingAction.value;
+                if (pending == null) return const SizedBox.shrink();
+
+                return Container(
+                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: palette.cardSurface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: palette.cardBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pending Action',
+                        style: AppText.poppins(
+                          color: palette.accentBlue,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        pending.description,
+                        style: AppText.poppins(
+                          color: palette.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                await geminiController.confirmPendingAction();
+                                _scrollToBottom();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: palette.accentBlue,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Text(
+                                'Confirm',
+                                style: AppText.poppins(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                geminiController.cancelPendingAction();
+                                _scrollToBottom();
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: palette.cardBorder),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                backgroundColor: palette.isDark
+                                    ? Colors.transparent
+                                    : palette.cardSurface,
+                              ),
+                              child: Text(
+                                'Cancel',
+                                style: AppText.poppins(
+                                  color: palette.textPrimary,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
               }),
 
               // Input field
@@ -511,6 +624,63 @@ class _AIChatPageState extends State<AIChatPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSuggestions(_AIChatPalette palette) {
+    final suggestions = [
+      {'icon': Icons.auto_graph, 'text': 'What\'s my balance?'},
+      {'icon': Icons.settings_suggest, 'text': 'Set fee for 1-500 to 15'},
+      {'icon': Icons.edit, 'text': 'Update transaction amount'},
+      {'icon': Icons.delete_outline, 'text': 'Delete transaction'},
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        alignment: WrapAlignment.center,
+        children: suggestions.map((suggestion) {
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                messageController.text = suggestion['text'] as String;
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: palette.cardSurface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: palette.cardBorder),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      suggestion['icon'] as IconData,
+                      size: 16,
+                      color: palette.accentBlue,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      suggestion['text'] as String,
+                      style: AppText.poppins(
+                        fontSize: 13,
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

@@ -6,7 +6,7 @@ import '../models/receipt_model.dart';
 
 class GeminiService {
   static const String _apiKey =
-      'AIzaSyBr3kNFm_wiC-m8ykhWRS4NaLWfCGeJ2Hc'; // Replace with your NEW API key from Google AI Studio
+      'AIzaSyDSAB4NyKpwXaWoLoZOhG3P5Bc2PKwc_hE'; // Replace with your NEW API key from Google AI Studio
   late final GenerativeModel _model;
 
   GeminiService() {

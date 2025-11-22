@@ -7,6 +7,9 @@ import '../services/biometric_auth_service.dart';
 import '../utils/app_text.dart';
 import 'login_selection_page.dart';
 import 'fee_settings_page.dart';
+import 'reports_page.dart';
+import 'profile_edit_page.dart';
+import 'calendar_view_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -30,6 +33,12 @@ class _SettingsPageState extends State<SettingsPage> {
       label: 'Profile details',
       description: 'Name, number, PIN',
       color: Color(0xFF6AC1FF),
+    ),
+    _QuickAction(
+      icon: Icons.calendar_month_outlined,
+      label: 'Calendar view',
+      description: 'View by date',
+      color: Color(0xFF10B981),
     ),
     _QuickAction(
       icon: Icons.shield_outlined,
@@ -331,7 +340,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                onPressed: () => _showComingSoon('Profile editing'),
+                onPressed: () => Get.to(() => const ProfileEditPage()),
                 child: Text(
                   'Edit',
                   style: AppText.poppins(
@@ -369,7 +378,17 @@ class _SettingsPageState extends State<SettingsPage> {
                 (action) => _QuickActionCard(
                   action: action,
                   palette: palette,
-                  onTap: () => _showComingSoon(action.label),
+                  onTap: () {
+                    if (action.label == 'Profile details') {
+                      Get.to(() => const ProfileEditPage());
+                    } else if (action.label == 'Calendar view') {
+                      Get.to(() => const CalendarViewPage());
+                    } else if (action.label == 'Transfer fees') {
+                      Get.to(() => const FeeSettingsPage());
+                    } else {
+                      _showComingSoon(action.label);
+                    }
+                  },
                 ),
               )
               .toList(),
@@ -383,12 +402,24 @@ class _SettingsPageState extends State<SettingsPage> {
       title: 'Transaction fees',
       subtitle: 'Configure your fee ranges',
       palette: palette,
-      child: _SupportTile(
-        icon: Icons.attach_money_rounded,
-        title: 'Fee settings',
-        subtitle: 'Manage transaction fee ranges',
-        palette: palette,
-        onTap: () => Get.to(() => const FeeSettingsPage()),
+      child: Column(
+        children: [
+          _SupportTile(
+            icon: Icons.attach_money_rounded,
+            title: 'Fee settings',
+            subtitle: 'Manage transaction fee ranges',
+            palette: palette,
+            onTap: () => Get.to(() => const FeeSettingsPage()),
+          ),
+          const SizedBox(height: 8),
+          _SupportTile(
+            icon: Icons.file_download_rounded,
+            title: 'Export Reports',
+            subtitle: 'Generate CSV reports (Daily, Weekly, Monthly, Yearly)',
+            palette: palette,
+            onTap: () => Get.to(() => const ReportsPage()),
+          ),
+        ],
       ),
     );
   }

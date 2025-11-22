@@ -4,7 +4,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controllers/app_controller.dart';
-import '../controllers/theme_controller.dart';
 import '../services/transaction_service.dart';
 import '../models/transaction_model.dart';
 
@@ -51,7 +50,6 @@ class TransactionLogsPage extends StatefulWidget {
 class _TransactionLogsPageState extends State<TransactionLogsPage> {
   final TransactionService _transactionService = TransactionService();
   final AppController controller = Get.find<AppController>();
-  final ThemeController _themeController = Get.find<ThemeController>();
   final currencyFormat =
       NumberFormat.currency(locale: 'en_PH', symbol: '₱', decimalDigits: 2);
   final dateFormat = DateFormat('MMM dd, yyyy');

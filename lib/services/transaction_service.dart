@@ -112,7 +112,6 @@ class TransactionService {
         .collection(_transactionsCollection)
         .where('userId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
-        .limit(50)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs

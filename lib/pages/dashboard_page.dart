@@ -12,6 +12,7 @@ import 'transaction_logs_page.dart';
 import 'settings_page.dart';
 import 'landing_page.dart';
 import 'ai_chat_page.dart';
+import 'calendar_view_page.dart';
 import 'dart:math' as math;
 
 class _DashboardPalette {
@@ -168,30 +169,69 @@ class _DashboardPageState extends State<DashboardPage> {
                         .animate()
                         .fadeIn(duration: 400.ms)
                         .slideX(begin: -0.3, end: 0),
-                    GestureDetector(
-                      onTap: () => _showLogoutDialog(context),
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: palette.cardSurface,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: palette.cardBorder),
-                          boxShadow: [
-                            BoxShadow(
-                              color: palette.shadowDark,
-                              offset: const Offset(2, 2),
-                              blurRadius: 6,
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Get.to(
+                            () => const CalendarViewPage(),
+                            transition: Transition.cupertino,
+                            duration: const Duration(milliseconds: 400),
+                          ),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: palette.cardSurface,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: palette.cardBorder),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: palette.shadowDark,
+                                  offset: const Offset(2, 2),
+                                  blurRadius: 6,
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.logout_rounded,
-                          color: Colors.red.shade400,
-                          size: 20,
-                        ),
-                      ),
-                    ).animate().fadeIn(duration: 400.ms).scale(delay: 200.ms),
+                            child: Icon(
+                              Icons.calendar_month_rounded,
+                              color: palette.accentBlue,
+                              size: 20,
+                            ),
+                          ),
+                        )
+                            .animate()
+                            .fadeIn(duration: 400.ms)
+                            .scale(delay: 150.ms),
+                        const SizedBox(width: 10),
+                        GestureDetector(
+                          onTap: () => _showLogoutDialog(context),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: palette.cardSurface,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: palette.cardBorder),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: palette.shadowDark,
+                                  offset: const Offset(2, 2),
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.logout_rounded,
+                              color: Colors.red.shade400,
+                              size: 20,
+                            ),
+                          ),
+                        )
+                            .animate()
+                            .fadeIn(duration: 400.ms)
+                            .scale(delay: 200.ms),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -410,7 +450,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               {
                                 'label': 'Transactions',
                                 'value':
-                                    '${dashController.recentTransactions.length}',
+                                    '${dashController.totalTransactions.value}',
                                 'icon': Icons.receipt_long,
                                 'color': const Color(0xFF8B7CFF),
                               },
@@ -434,6 +474,116 @@ class _DashboardPageState extends State<DashboardPage> {
                               }).toList(),
                             )
                                 .animate(delay: 200.ms)
+                                .fadeIn(duration: 400.ms)
+                                .slideY(begin: 0.2, end: 0);
+                          }),
+
+                          const SizedBox(height: 25),
+
+                          // Analytics Insights Section
+                          Obx(() {
+                            final transactions =
+                                dashController.recentTransactions;
+                            if (transactions.isEmpty)
+                              return const SizedBox.shrink();
+
+                            // Calculate analytics
+                            final avgTransaction = transactions.isNotEmpty
+                                ? transactions.fold<double>(
+                                        0, (sum, t) => sum + t.amount) /
+                                    transactions.length
+                                : 0.0;
+
+                            final largest = transactions
+                                .reduce((a, b) => a.amount > b.amount ? a : b);
+                            final smallest = transactions
+                                .reduce((a, b) => a.amount < b.amount ? a : b);
+
+                            // Top recipient
+                            final recipientCounts = <String, int>{};
+                            final recipientTotals = <String, double>{};
+                            for (final tx in transactions) {
+                              recipientCounts[tx.recipientName] =
+                                  (recipientCounts[tx.recipientName] ?? 0) + 1;
+                              recipientTotals[tx.recipientName] =
+                                  (recipientTotals[tx.recipientName] ?? 0) +
+                                      tx.amount;
+                            }
+                            final topRecipient = recipientCounts.entries
+                                .reduce((a, b) => a.value > b.value ? a : b);
+
+                            // Calculate savings rate
+                            final totalIn = dashController.totalCashIn.value;
+                            final totalOut = dashController.totalCashOut.value;
+                            final savingsRate = totalIn > 0
+                                ? ((totalIn - totalOut) / totalIn * 100)
+                                : 0.0;
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Financial Insights',
+                                  style: AppText.poppins(
+                                    color: palette.textPrimary,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Based on your transaction data',
+                                  style: AppText.poppins(
+                                    color: palette.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Insights Grid
+                                GridView.count(
+                                  crossAxisCount: 2,
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                  childAspectRatio: 1.5,
+                                  children: [
+                                    _buildInsightCard(
+                                      'Avg Transaction',
+                                      currencyFormat.format(avgTransaction),
+                                      Icons.analytics_outlined,
+                                      const Color(0xFF9C27B0),
+                                      palette,
+                                    ),
+                                    _buildInsightCard(
+                                      'Savings Rate',
+                                      '${savingsRate.toStringAsFixed(1)}%',
+                                      Icons.savings_outlined,
+                                      const Color(0xFF4CAF50),
+                                      palette,
+                                    ),
+                                    _buildInsightCard(
+                                      'Top Recipient',
+                                      topRecipient.key,
+                                      Icons.person_outline,
+                                      const Color(0xFF2196F3),
+                                      palette,
+                                      subtitle: '${topRecipient.value} txs',
+                                    ),
+                                    _buildInsightCard(
+                                      'Largest Tx',
+                                      currencyFormat.format(largest.amount),
+                                      Icons.trending_up,
+                                      const Color(0xFFFF5722),
+                                      palette,
+                                      subtitle: largest.recipientName,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            )
+                                .animate(delay: 250.ms)
                                 .fadeIn(duration: 400.ms)
                                 .slideY(begin: 0.2, end: 0);
                           }),
@@ -680,6 +830,129 @@ class _DashboardPageState extends State<DashboardPage> {
 
                           const SizedBox(height: 25),
 
+                          // Cash Flow Comparison Chart
+                          Obx(() {
+                            final transactions =
+                                dashController.recentTransactions;
+                            if (transactions.isEmpty)
+                              return const SizedBox.shrink();
+
+                            final cashIn = transactions
+                                .where((t) => t.transactionType == 'Cash In')
+                                .fold<double>(0, (sum, t) => sum + t.amount);
+                            final cashOut = transactions
+                                .where((t) => t.transactionType == 'Cash Out')
+                                .fold<double>(0, (sum, t) => sum + t.amount);
+                            final maxValue =
+                                cashIn > cashOut ? cashIn : cashOut;
+
+                            return Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: palette.cardSurface,
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: palette.cardBorder),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: palette.shadowDark,
+                                    offset: const Offset(2, 2),
+                                    blurRadius: 10,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Cash Flow Comparison',
+                                    style: AppText.poppins(
+                                      color: palette.textPrimary,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Income vs Expenses',
+                                    style: AppText.poppins(
+                                      color: palette.textSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  _buildComparisonBar(
+                                      'Cash In',
+                                      cashIn,
+                                      maxValue,
+                                      const Color(0xFF4CAF50),
+                                      palette),
+                                  const SizedBox(height: 16),
+                                  _buildComparisonBar(
+                                      'Cash Out',
+                                      cashOut,
+                                      maxValue,
+                                      const Color(0xFFFF9800),
+                                      palette),
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: palette.isDark
+                                          ? Colors.white.withOpacity(0.05)
+                                          : Colors.black.withOpacity(0.03),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Net Flow',
+                                          style: AppText.poppins(
+                                            color: palette.textPrimary,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              cashIn >= cashOut
+                                                  ? Icons.trending_up
+                                                  : Icons.trending_down,
+                                              color: cashIn >= cashOut
+                                                  ? const Color(0xFF4CAF50)
+                                                  : const Color(0xFFEF4444),
+                                              size: 18,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              currencyFormat
+                                                  .format(cashIn - cashOut),
+                                              style: AppText.poppins(
+                                                color: cashIn >= cashOut
+                                                    ? const Color(0xFF4CAF50)
+                                                    : const Color(0xFFEF4444),
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                                .animate(delay: 500.ms)
+                                .fadeIn(duration: 400.ms)
+                                .slideY(begin: 0.2, end: 0);
+                          }),
+
+                          const SizedBox(height: 25),
+
                           // Recent Transactions Header
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -868,7 +1141,7 @@ class _DashboardPageState extends State<DashboardPage> {
     _DashboardPalette palette,
   ) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: BorderRadius.circular(20),
@@ -883,7 +1156,6 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
@@ -898,38 +1170,173 @@ class _DashboardPageState extends State<DashboardPage> {
               size: 18,
             ),
           ),
-          const SizedBox(height: 8),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  value,
-                  style: AppText.poppins(
-                    color: palette.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  style: AppText.poppins(
-                    color: palette.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+          const Spacer(),
+          Text(
+            value,
+            style: AppText.poppins(
+              color: palette.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: AppText.poppins(
+              color: palette.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildInsightCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+    _DashboardPalette palette, {
+    String? subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: palette.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: palette.shadowDark,
+            offset: const Offset(1, 1),
+            blurRadius: 6,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const Spacer(),
+          Text(
+            label,
+            style: AppText.poppins(
+              color: palette.textSecondary,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: AppText.poppins(
+              color: palette.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 1),
+            Text(
+              subtitle,
+              style: AppText.poppins(
+                color: palette.textSecondary,
+                fontSize: 9,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComparisonBar(
+    String label,
+    double value,
+    double maxValue,
+    Color color,
+    _DashboardPalette palette,
+  ) {
+    final percentage = maxValue > 0 ? (value / maxValue) : 0.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: AppText.poppins(
+                color: palette.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              currencyFormat.format(value),
+              style: AppText.poppins(
+                color: palette.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            height: 10,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: palette.isDark
+                  ? Colors.white.withOpacity(0.1)
+                  : Colors.black.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: percentage,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [color, color.withOpacity(0.7)],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

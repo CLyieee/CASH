@@ -4,10 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import '../services/ocr_service.dart';
 import '../controllers/app_controller.dart';
-import '../controllers/theme_controller.dart';
-import '../models/receipt_model.dart';
 import 'receipt_preview_page.dart';
-import 'dart:io';
 
 class _ScanPagePalette {
   _ScanPagePalette(ThemeData theme)
@@ -54,7 +51,6 @@ class ScanPage extends StatefulWidget {
 class _ScanPageState extends State<ScanPage> {
   final OCRService _ocrService = OCRService();
   final AppController controller = Get.find<AppController>();
-  final ThemeController _themeController = Get.find<ThemeController>();
   String? scannedCode;
   bool isProcessing = false;
 

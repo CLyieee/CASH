@@ -141,29 +141,40 @@ class OCRService {
   // Extract receipt data from OCR text
   ReceiptModel? _extractReceiptData(String text, List<FeeRange> feeRanges) {
     try {
+      print('📊 Extracting receipt data...');
+
       // Extract recipient name (e.g., "CL*****M M.", "MA****N M.")
       String recipientName = _extractRecipientName(text);
+      print('👤 Recipient Name: "$recipientName"');
 
       // Extract phone number (e.g., "+63 915 609 1737")
       String phoneNumber = _extractPhoneNumber(text);
+      print('📱 Phone Number: "$phoneNumber"');
 
       // Extract amount (e.g., "1,400.00")
       double amount = _extractAmount(text);
+      print('💵 Amount: ₱$amount');
 
       // Calculate fee based on amount and fee ranges
       double fee = _calculateFee(amount, feeRanges);
 
       // Extract reference number (e.g., "5034 322 274670")
       String refNumber = _extractReferenceNumber(text);
+      print('🔢 Reference Number: "$refNumber"');
 
       // Extract date (e.g., "Nov 04, 2025 10:31 AM")
       DateTime date = _extractDate(text);
+      print('📅 Date: $date');
 
       if (recipientName.isEmpty || phoneNumber.isEmpty || amount == 0) {
-        print('Failed to extract required data');
+        print('❌ Failed to extract required data:');
+        print('   - Recipient: ${recipientName.isEmpty ? "MISSING" : "OK"}');
+        print('   - Phone: ${phoneNumber.isEmpty ? "MISSING" : "OK"}');
+        print('   - Amount: ${amount == 0 ? "MISSING" : "OK"}');
         return null;
       }
 
+      print('✅ All required data extracted successfully!');
       return ReceiptModel(
         recipientName: recipientName,
         phoneNumber: phoneNumber,
@@ -174,12 +185,12 @@ class OCRService {
         source: _detectSource(text),
       );
     } catch (e) {
-      print('Error extracting receipt data: $e');
+      print('❌ Error extracting receipt data: $e');
       return null;
     }
   }
 
-  // Extract recipient name (handles GCash patterns like CL*****M M., MA****N M., CE••••A B.)
+  // Extract recipient name (handles GCash patterns like CL*****M M., MA****N M., CE••••A B., AL•OC.)
   String _extractRecipientName(String text) {
     final lines = text.split('\n');
 
@@ -187,6 +198,7 @@ class OCRService {
     // 1. "CL*****M M." - 2 letters + asterisks + 1 letter + space + initial
     // 2. "CE••••A B." - 2 letters + dots + 1 letter + space + initial
     // 3. "MA....N M." - 2 letters + regular dots + 1 letter + space + initial
+    // 4. "AL•OC." - 2+ letters + symbol + 2+ letters + dot (shorter format)
     final patterns = [
       // Pattern 1: With asterisks (CL*****M M.)
       RegExp(r'[A-Z]{2}\*{1,10}[A-Z]\s+[A-Z]\.', caseSensitive: true),
@@ -196,6 +208,10 @@ class OCRService {
       RegExp(r'[A-Z]{2}[\.]{1,10}[A-Z]\s+[A-Z]\.', caseSensitive: true),
       // Pattern 4: Mixed symbols (CL•*•*M M.)
       RegExp(r'[A-Z]{2}[•*\.]{1,10}[A-Z]\s+[A-Z]\.', caseSensitive: true),
+      // Pattern 5: Short format with single symbol (AL•OC., AL*OC., AL.OC.)
+      RegExp(r'[A-Z]{2}[•*\.][A-Z]{2,}\.', caseSensitive: true),
+      // Pattern 6: Very short format (2-3 letters + symbol + 2-3 letters)
+      RegExp(r'[A-Z]{2,3}[•*\.]{1,3}[A-Z]{2,3}\.?', caseSensitive: true),
     ];
 
     // Try each pattern
@@ -302,6 +318,32 @@ class OCRService {
       }
     }
 
+    // For regular receipts, look for "Total Amount Sent" or similar labels
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].trim();
+
+      if (line.toLowerCase().contains('total amount sent') ||
+          line.toLowerCase() == 'amount sent' ||
+          line.toLowerCase() == 'total amount') {
+        // Look ahead for amount value (format: P55.00 or 55.00)
+        for (int j = i + 1; j < lines.length && j < i + 5; j++) {
+          final nextLine = lines[j].trim();
+
+          // Match amount format with or without P prefix
+          final amountMatch =
+              RegExp(r'^P?\s*([\d,]+\.\d{2})$', caseSensitive: false)
+                  .firstMatch(nextLine);
+          if (amountMatch != null) {
+            String amountStr = amountMatch.group(1)!.replaceAll(',', '');
+            final parsed = double.tryParse(amountStr);
+            if (parsed != null && parsed > 0) {
+              return parsed;
+            }
+          }
+        }
+      }
+    }
+
     // Fallback: Generic "Amount" pattern for regular receipts
     final amountPattern = RegExp(
       r'Amount\s*[\r\n]+\s*([\d,]+\.?\d*)',
@@ -314,8 +356,8 @@ class OCRService {
       return double.tryParse(amountStr) ?? 0.0;
     }
 
-    // Alternative pattern
-    final altPattern = RegExp(r'₱?\s*([\d,]+\.\d{2})');
+    // Alternative pattern - look for P or ₱ followed by amount
+    final altPattern = RegExp(r'[P₱]\s*([\d,]+\.\d{2})');
     match = altPattern.firstMatch(text);
     if (match != null) {
       String amountStr = match.group(1)!.replaceAll(',', '');
@@ -373,14 +415,38 @@ class OCRService {
 
       // Look for "Ref No." label - can be on same line or separate line
       if (line.toLowerCase().contains('ref no.')) {
-        // Check if ref number is on the same line (e.g., "Ref No. 5034 929 919808 Nov 21, 2025")
+        // Check if ref number is on the same line (e.g., "Ref No. 5034 929 794198 Nov 21, 2025 8:13 PM")
         final sameLine =
             line.substring(line.toLowerCase().indexOf('ref no.') + 7).trim();
         if (sameLine.isNotEmpty) {
-          // Extract digits with spaces (e.g., "5034 929 919808")
-          final refMatch = RegExp(r'(\d[\d\s]{10,})').firstMatch(sameLine);
+          // Extract digits with spaces - stop before date (before month names)
+          // Pattern: digits and spaces only, at least 10 digits total
+          final refMatch = RegExp(
+                  r'(\d[\d\s]{10,}?)(?=\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)|\s*$)',
+                  caseSensitive: false)
+              .firstMatch(sameLine);
           if (refMatch != null) {
             return refMatch.group(1)!.trim();
+          }
+          // Fallback: Just get the first sequence of digits and spaces
+          final fallbackMatch = RegExp(r'(\d[\d\s]{10,})').firstMatch(sameLine);
+          if (fallbackMatch != null) {
+            // Extract just the reference number part (first 10-15 digits with spaces)
+            final refPart = fallbackMatch.group(1)!.trim();
+            // Split and take only digit sequences, stop at first 12+ digits
+            final digitGroups = refPart.split(' ');
+            final refNumber = <String>[];
+            int totalDigits = 0;
+            for (var group in digitGroups) {
+              if (RegExp(r'^\d+$').hasMatch(group)) {
+                refNumber.add(group);
+                totalDigits += group.length;
+                if (totalDigits >= 10) break;
+              }
+            }
+            if (refNumber.isNotEmpty) {
+              return refNumber.join(' ');
+            }
           }
         }
 
