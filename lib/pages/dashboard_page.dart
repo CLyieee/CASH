@@ -3,6 +3,7 @@ import 'package:g/utils/app_text.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui' as ui;
 import '../services/google_sign_in_service.dart';
 import '../controllers/app_controller.dart';
 import '../controllers/dashboard_controller.dart';
@@ -11,6 +12,53 @@ import 'transaction_logs_page.dart';
 import 'settings_page.dart';
 import 'landing_page.dart';
 import 'dart:math' as math;
+
+class _DashboardPalette {
+  _DashboardPalette(ThemeData theme)
+      : isDark = theme.brightness == Brightness.dark,
+        background = theme.scaffoldBackgroundColor,
+        cardSurface = theme.brightness == Brightness.dark
+            ? const Color(0xFF1A2332)
+            : Colors.white,
+        cardBorder = theme.brightness == Brightness.dark
+            ? Colors.white.withOpacity(0.08)
+            : Colors.black.withOpacity(0.06),
+        textPrimary = theme.colorScheme.onSurface,
+        textSecondary = theme.brightness == Brightness.dark
+            ? const Color(0xFF8A99B3)
+            : const Color(0xFF5A6B84),
+        accentBlue = theme.brightness == Brightness.dark
+            ? const Color(0xFF5BA3E8)
+            : const Color(0xFF64B5F6),
+        accentGreen = theme.brightness == Brightness.dark
+            ? const Color(0xFF4DB87F)
+            : const Color(0xFF4CAF50),
+        shadowLight = theme.brightness == Brightness.dark
+            ? Colors.white.withOpacity(0.05)
+            : Colors.white.withOpacity(0.8),
+        shadowDark = theme.brightness == Brightness.dark
+            ? Colors.black.withOpacity(0.4)
+            : Colors.black.withOpacity(0.2),
+        navIconActive = theme.brightness == Brightness.dark
+            ? const Color(0xFF5BA3E8)
+            : const Color(0xFF64B5F6),
+        navIconInactive = theme.brightness == Brightness.dark
+            ? Colors.white38
+            : const Color(0xFF2C3E50).withOpacity(0.4);
+
+  final bool isDark;
+  final Color background;
+  final Color cardSurface;
+  final Color cardBorder;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color accentBlue;
+  final Color accentGreen;
+  final Color shadowLight;
+  final Color shadowDark;
+  final Color navIconActive;
+  final Color navIconInactive;
+}
 
 class DashboardPage extends StatefulWidget {
   final String userName;
@@ -43,558 +91,884 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = _DashboardPalette(theme);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFE0E5EC),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Top Bar
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome Back',
-                        style: AppText.poppins(
-                          color: const Color(0xFF64B5F6),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Text(
-                        widget.userName,
-                        style: AppText.poppins(
-                          color: const Color(0xFF2C3E50),
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(
-                              color: Colors.white.withOpacity(0.8),
-                              offset: const Offset(-2, -2),
-                              blurRadius: 4,
+      backgroundColor: palette.background,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final userId = controller.currentUserId.value;
+          if (userId.isNotEmpty) {
+            await dashController.loadDashboardData(userId);
+          }
+        },
+        color: palette.accentBlue,
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Top Bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [palette.accentBlue, palette.accentGreen],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            Shadow(
-                              color: Colors.black.withOpacity(0.2),
-                              offset: const Offset(2, 2),
-                              blurRadius: 4,
+                          ),
+                          child: Center(
+                            child: Text(
+                              widget.userName.isNotEmpty
+                                  ? widget.userName[0].toUpperCase()
+                                  : 'U',
+                              style: AppText.poppins(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Welcome Back',
+                              style: AppText.poppins(
+                                color: palette.textSecondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              widget.userName,
+                              style: AppText.poppins(
+                                color: palette.textPrimary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  )
-                      .animate()
-                      .fadeIn(duration: 400.ms)
-                      .slideX(begin: -0.3, end: 0),
-                  GestureDetector(
-                    onTap: () => _showLogoutDialog(context),
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0E5EC),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.8),
-                            offset: const Offset(-4, -4),
-                            blurRadius: 8,
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            offset: const Offset(4, 4),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade400,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.red.shade400.withOpacity(0.4),
-                                blurRadius: 8,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.logout_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
+                      ],
+                    )
+                        .animate()
+                        .fadeIn(duration: 400.ms)
+                        .slideX(begin: -0.3, end: 0),
+                    GestureDetector(
+                      onTap: () => _showLogoutDialog(context),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: palette.cardSurface,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: palette.cardBorder),
+                          boxShadow: [
+                            BoxShadow(
+                              color: palette.shadowDark,
+                              offset: const Offset(2, 2),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.logout_rounded,
+                          color: Colors.red.shade400,
+                          size: 20,
                         ),
                       ),
-                    ),
-                  ).animate().fadeIn(duration: 400.ms).scale(delay: 200.ms),
+                    ).animate().fadeIn(duration: 400.ms).scale(delay: 200.ms),
+                  ],
+                ),
+              ),
+
+              // Main Content
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 16),
+
+                          // Hero Balance Card with Glass Effect
+                          RepaintBoundary(
+                            child: Container(
+                              width: double.infinity,
+                              height: 180,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: palette.isDark
+                                      ? [
+                                          const Color(0xFF2D4263),
+                                          const Color(0xFF1A2B3F)
+                                        ]
+                                      : [
+                                          const Color(0xFF64B5F6),
+                                          const Color(0xFF42A5F5)
+                                        ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(28),
+                                border: Border.all(
+                                  color: palette.isDark
+                                      ? Colors.white.withOpacity(0.1)
+                                      : Colors.transparent,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: palette.accentBlue.withOpacity(0.3),
+                                    offset: const Offset(0, 12),
+                                    blurRadius: 24,
+                                  ),
+                                ],
+                              ),
+                              child: Stack(
+                                children: [
+                                  // Animated background pattern
+                                  Positioned(
+                                    right: -20,
+                                    top: -20,
+                                    child: Container(
+                                      width: 150,
+                                      height: 150,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.white.withOpacity(0.05),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: 40,
+                                    bottom: -30,
+                                    child: Container(
+                                      width: 100,
+                                      height: 100,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.white.withOpacity(0.05),
+                                      ),
+                                    ),
+                                  ),
+                                  // Content
+                                  Padding(
+                                    padding: const EdgeInsets.all(24),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Total Balance',
+                                              style: AppText.poppins(
+                                                color: Colors.white
+                                                    .withOpacity(0.85),
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 6,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white
+                                                    .withOpacity(0.15),
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.trending_up,
+                                                    color: Colors.white,
+                                                    size: 14,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'Live',
+                                                    style: AppText.poppins(
+                                                      color: Colors.white,
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Obx(() {
+                                          final totalBalance = dashController
+                                                  .totalCashIn.value +
+                                              dashController.totalCashOut.value;
+                                          return Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                currencyFormat
+                                                    .format(totalBalance),
+                                                style: AppText.poppins(
+                                                  color: Colors.white,
+                                                  fontSize: 42,
+                                                  fontWeight: FontWeight.bold,
+                                                  height: 1.1,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons
+                                                        .account_balance_wallet,
+                                                    color: Colors.white
+                                                        .withOpacity(0.7),
+                                                    size: 16,
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    'Available Funds',
+                                                    style: AppText.poppins(
+                                                      color: Colors.white
+                                                          .withOpacity(0.7),
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          );
+                                        }),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                                .animate()
+                                .fadeIn(delay: 100.ms, duration: 500.ms)
+                                .slideY(begin: 0.3, end: 0)
+                                .shimmer(
+                                    delay: 1000.ms,
+                                    duration: 1800.ms,
+                                    color: Colors.white.withOpacity(0.1)),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Quick Stats Grid (2x2)
+                          Obx(() {
+                            final stats = [
+                              {
+                                'label': 'Cash In',
+                                'value': currencyFormat
+                                    .format(dashController.totalCashIn.value),
+                                'icon': Icons.arrow_downward,
+                                'color': const Color(0xFF4CAF50),
+                              },
+                              {
+                                'label': 'Cash Out',
+                                'value': currencyFormat
+                                    .format(dashController.totalCashOut.value),
+                                'icon': Icons.arrow_upward,
+                                'color': const Color(0xFFFF9800),
+                              },
+                              {
+                                'label': 'Total Fees',
+                                'value': currencyFormat
+                                    .format(dashController.totalFees.value),
+                                'icon': Icons.account_balance_wallet,
+                                'color': const Color(0xFF64B5F6),
+                              },
+                              {
+                                'label': 'Transactions',
+                                'value':
+                                    '${dashController.recentTransactions.length}',
+                                'icon': Icons.receipt_long,
+                                'color': const Color(0xFF8B7CFF),
+                              },
+                            ];
+
+                            return GridView.count(
+                              crossAxisCount: stats.length == 1 ? 1 : 2,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              mainAxisSpacing: 12,
+                              crossAxisSpacing: 12,
+                              childAspectRatio: stats.length == 1 ? 2.5 : 1.4,
+                              children: stats.map((stat) {
+                                return _buildStatCard(
+                                  stat['label'] as String,
+                                  stat['value'] as String,
+                                  stat['icon'] as IconData,
+                                  stat['color'] as Color,
+                                  palette,
+                                );
+                              }).toList(),
+                            )
+                                .animate(delay: 200.ms)
+                                .fadeIn(duration: 400.ms)
+                                .slideY(begin: 0.2, end: 0);
+                          }),
+
+                          const SizedBox(height: 25),
+
+                          // Earnings Chart Card
+                          Center(
+                            child: Container(
+                              constraints: const BoxConstraints(maxWidth: 400),
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: palette.cardSurface,
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: palette.cardBorder),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: palette.shadowDark,
+                                    offset: const Offset(2, 2),
+                                    blurRadius: 10,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Earnings Overview',
+                                              style: AppText.poppins(
+                                                color: palette.textPrimary,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Obx(() => Text(
+                                                  dashController.selectedPeriod
+                                                              .value ==
+                                                          'Daily'
+                                                      ? 'Last 7 days'
+                                                      : dashController
+                                                                  .selectedPeriod
+                                                                  .value ==
+                                                              'Weekly'
+                                                          ? 'Last 4 weeks'
+                                                          : 'Last 6 months',
+                                                  style: AppText.poppins(
+                                                    color:
+                                                        palette.textSecondary,
+                                                    fontSize: 12,
+                                                  ),
+                                                )),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Obx(() => Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 4),
+                                            decoration: BoxDecoration(
+                                              color: palette.accentBlue
+                                                  .withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                _buildPeriodTab(
+                                                    'Daily', palette),
+                                                _buildPeriodTab(
+                                                    'Weekly', palette),
+                                                _buildPeriodTab(
+                                                    'Monthly', palette),
+                                              ],
+                                            ),
+                                          )),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Obx(() => SizedBox(
+                                        height: 200,
+                                        child: _buildLineChart(palette),
+                                      )),
+                                ],
+                              ),
+                            ),
+                          )
+                              .animate(delay: 300.ms)
+                              .fadeIn(duration: 500.ms)
+                              .slideY(begin: 0.3, end: 0),
+
+                          const SizedBox(height: 25),
+
+                          // Donut Chart Card
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: palette.cardSurface,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: palette.cardBorder),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: palette.shadowDark,
+                                  offset: const Offset(2, 2),
+                                  blurRadius: 10,
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Transaction Sources',
+                                  style: AppText.poppins(
+                                    color: palette.textPrimary,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  'Amount breakdown by source',
+                                  style: AppText.poppins(
+                                    color: palette.textSecondary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Obx(() {
+                                  final breakdown = Map<String, double>.from(
+                                      dashController.sourceBreakdown);
+                                  final total = breakdown.values
+                                      .fold(0.0, (sum, value) => sum + value);
+
+                                  return SizedBox(
+                                    height: 200,
+                                    width: 200,
+                                    child: Stack(
+                                      children: [
+                                        CustomPaint(
+                                          size: const Size(200, 200),
+                                          painter: DonutChartPainter(
+                                            sourceBreakdown: breakdown,
+                                          ),
+                                        ),
+                                        Center(
+                                          child: Container(
+                                            width: 110,
+                                            height: 110,
+                                            decoration: BoxDecoration(
+                                              color: palette.cardSurface,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Center(
+                                              child: Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Text(
+                                                    'Total',
+                                                    style: AppText.poppins(
+                                                      color:
+                                                          palette.textSecondary,
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    currencyFormat
+                                                        .format(total),
+                                                    style: AppText.poppins(
+                                                      color:
+                                                          palette.textPrimary,
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                                const SizedBox(height: 20),
+                                Obx(() {
+                                  if (dashController.sourceBreakdown.isEmpty) {
+                                    return Text(
+                                      'No transaction data yet',
+                                      style: AppText.poppins(
+                                        color: palette.textSecondary,
+                                        fontSize: 12,
+                                      ),
+                                    );
+                                  }
+
+                                  final sources = dashController
+                                      .sourceBreakdown.entries
+                                      .toList();
+                                  sources.sort(
+                                      (a, b) => b.value.compareTo(a.value));
+
+                                  return Wrap(
+                                    spacing: 16,
+                                    runSpacing: 12,
+                                    alignment: WrapAlignment.center,
+                                    children:
+                                        sources.asMap().entries.map((entry) {
+                                      final index = entry.key;
+                                      final source = entry.value;
+                                      return _buildLegend(
+                                        source.key,
+                                        DonutChartPainter.getColorForSource(
+                                            source.key, index),
+                                        currencyFormat.format(source.value),
+                                      );
+                                    }).toList(),
+                                  );
+                                }),
+                              ],
+                            ),
+                          )
+                              .animate(delay: 400.ms)
+                              .fadeIn(duration: 500.ms)
+                              .slideY(begin: 0.3, end: 0),
+
+                          const SizedBox(height: 25),
+
+                          // Recent Transactions Header
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Recent Activity',
+                                    style: AppText.poppins(
+                                      color: palette.textPrimary,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Transaction timeline',
+                                    style: AppText.poppins(
+                                      color: palette.textSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              TextButton.icon(
+                                onPressed: () {
+                                  Get.to(
+                                    () => const TransactionLogsPage(),
+                                    transition: Transition.rightToLeft,
+                                    duration: const Duration(milliseconds: 300),
+                                  );
+                                },
+                                icon: Icon(
+                                  Icons.arrow_forward,
+                                  size: 16,
+                                  color: palette.accentBlue,
+                                ),
+                                label: Text(
+                                  'View All',
+                                  style: AppText.poppins(
+                                    color: palette.accentBlue,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ).animate(delay: 500.ms).fadeIn(duration: 400.ms),
+
+                          const SizedBox(height: 20),
+
+                          Obx(() {
+                            if (dashController.recentTransactions.isEmpty) {
+                              return Container(
+                                padding: const EdgeInsets.all(32),
+                                decoration: BoxDecoration(
+                                  color: palette.cardSurface,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: palette.cardBorder),
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(20),
+                                        decoration: BoxDecoration(
+                                          color: palette.accentBlue
+                                              .withOpacity(0.1),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.receipt_long_rounded,
+                                          size: 40,
+                                          color: palette.accentBlue,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No transactions yet',
+                                        style: AppText.poppins(
+                                          color: palette.textPrimary,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Scan a receipt to get started',
+                                        style: AppText.poppins(
+                                          color: palette.textSecondary,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            final transactions = dashController
+                                .recentTransactions
+                                .take(5)
+                                .toList();
+                            return Column(
+                              children:
+                                  List.generate(transactions.length, (index) {
+                                final transaction = transactions[index];
+                                final isPositive =
+                                    transaction.transactionType == 'Cash In';
+                                final dateFormat = DateFormat('MMM dd, h:mm a');
+                                final isLast = index == transactions.length - 1;
+
+                                return _buildTimelineItem(
+                                  transaction.transactionType,
+                                  dateFormat.format(transaction.createdAt),
+                                  '${isPositive ? '+' : '-'}${currencyFormat.format(transaction.totalAmount)}',
+                                  isPositive,
+                                  isLast,
+                                  palette,
+                                )
+                                    .animate(delay: (600 + (index * 100)).ms)
+                                    .fadeIn(duration: 400.ms)
+                                    .slideX(begin: -0.2, end: 0);
+                              }),
+                            );
+                          }),
+
+                          const SizedBox(height: 120),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+
+      // Floating Bottom Navigation
+      bottomNavigationBar: SafeArea(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              margin: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              height: 70,
+              decoration: BoxDecoration(
+                color: palette.cardSurface,
+                borderRadius: BorderRadius.circular(35),
+                border: Border.all(color: palette.cardBorder),
+                boxShadow: [
+                  BoxShadow(
+                    color: palette.shadowDark,
+                    offset: const Offset(0, 4),
+                    blurRadius: 12,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(Icons.home_rounded, 'Home', 0),
+                  _buildNavItem(Icons.receipt_long_rounded, 'Logs', 1),
+                  const SizedBox(width: 60), // Space for center scan button
+                  _buildNavItem(Icons.settings_rounded, 'Settings', 2),
+                  const SizedBox(width: 8), // Balance spacing
                 ],
               ),
             ),
 
-            // Main Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 10),
-
-                    // Balance Card
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0E5EC),
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.8),
-                            offset: const Offset(-6, -6),
-                            blurRadius: 12,
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            offset: const Offset(6, 6),
-                            blurRadius: 12,
-                          ),
-                        ],
+            // Center Scan Button
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 45,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () {
+                    Get.to(
+                      () => const ScanPage(),
+                      transition: Transition.fadeIn,
+                      duration: const Duration(milliseconds: 300),
+                    );
+                  },
+                  child: Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: palette.isDark
+                            ? [const Color(0xFF5BA3E8), const Color(0xFF4A8FCF)]
+                            : [
+                                const Color(0xFF64B5F6),
+                                const Color(0xFF42A5F5)
+                              ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'TOTAL BALANCE',
-                            style: AppText.poppins(
-                              color: const Color(0xFF64B5F6),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Obx(() {
-                            final totalBalance =
-                                dashController.totalCashIn.value +
-                                    dashController.totalCashOut.value;
-                            return Text(
-                              currencyFormat.format(totalBalance),
-                              style: AppText.poppins(
-                                color: const Color(0xFF2C3E50),
-                                fontSize: 36,
-                                fontWeight: FontWeight.bold,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.white.withOpacity(0.8),
-                                    offset: const Offset(-2, -2),
-                                    blurRadius: 4,
-                                  ),
-                                  Shadow(
-                                    color: Colors.black.withOpacity(0.15),
-                                    offset: const Offset(2, 2),
-                                    blurRadius: 4,
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                        ],
-                      ),
-                    )
-                        .animate()
-                        .fadeIn(delay: 100.ms, duration: 500.ms)
-                        .slideY(begin: 0.3, end: 0),
-
-                    const SizedBox(height: 20),
-
-                    // Quick Actions
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Obx(() => _buildQuickActionButton(
-                                    'SEND/CASH IN',
-                                    currencyFormat.format(
-                                        dashController.totalCashIn.value),
-                                    const Color(0xFF4CAF50),
-                                  ))
-                              .animate(delay: 200.ms)
-                              .fadeIn(duration: 400.ms)
-                              .scale(begin: const Offset(0.8, 0.8)),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Obx(() => _buildQuickActionButton(
-                                    'RECEIVE/CASH OUT',
-                                    currencyFormat.format(
-                                        dashController.totalCashOut.value),
-                                    const Color(0xFF64B5F6),
-                                  ))
-                              .animate(delay: 300.ms)
-                              .fadeIn(duration: 400.ms)
-                              .scale(begin: const Offset(0.8, 0.8)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: palette.accentBlue.withOpacity(0.5),
+                          offset: const Offset(0, 8),
+                          blurRadius: 20,
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 25),
-
-                    // Donut Chart Card - Centered
-                    Center(
-                            child: Container(
-                      constraints: const BoxConstraints(maxWidth: 400),
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0E5EC),
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.8),
-                            offset: const Offset(-6, -6),
-                            blurRadius: 12,
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            offset: const Offset(6, 6),
-                            blurRadius: 12,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Fee Breakdown',
-                            style: AppText.poppins(
-                              color: const Color(0xFF2C3E50),
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Obx(() => SizedBox(
-                                height: 200,
-                                width: 200,
-                                child: Stack(
-                                  children: [
-                                    CustomPaint(
-                                      size: const Size(200, 200),
-                                      painter: DonutChartPainter(
-                                        sourceBreakdown:
-                                            dashController.sourceBreakdown,
-                                      ),
-                                    ),
-                                    Center(
-                                      child: Container(
-                                        width: 110,
-                                        height: 110,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFE0E5EC),
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color:
-                                                  Colors.white.withOpacity(0.8),
-                                              offset: const Offset(-4, -4),
-                                              blurRadius: 8,
-                                            ),
-                                            BoxShadow(
-                                              color:
-                                                  Colors.black.withOpacity(0.2),
-                                              offset: const Offset(4, 4),
-                                              blurRadius: 8,
-                                            ),
-                                          ],
-                                        ),
-                                        child: Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                'Total Fees',
-                                                style: AppText.poppins(
-                                                  color:
-                                                      const Color(0xFF64B5F6),
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                              Text(
-                                                currencyFormat.format(
-                                                    dashController
-                                                        .totalFees.value),
-                                                style: AppText.poppins(
-                                                  color:
-                                                      const Color(0xFF2C3E50),
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )),
-                          const SizedBox(height: 20),
-                          Wrap(
-                            spacing: 16,
-                            runSpacing: 12,
-                            alignment: WrapAlignment.center,
-                            children: [
-                              _buildLegend('GCASH', const Color(0xFF4CAF50)),
-                              _buildLegend('Cash In', const Color(0xFF64B5F6)),
-                              _buildLegend('Palawan', const Color(0xFFFF9800)),
-                              _buildLegend('Pailia', const Color(0xFFF44336)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ))
-                        .animate(delay: 400.ms)
-                        .fadeIn(duration: 500.ms)
-                        .slideY(begin: 0.3, end: 0),
-
-                    const SizedBox(height: 25),
-
-                    // Recent Transactions
-                    Text(
-                      'Recent Transactions',
-                      style: AppText.poppins(
-                        color: const Color(0xFF2C3E50),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          Shadow(
-                            color: Colors.white.withOpacity(0.8),
-                            offset: const Offset(-1, -1),
-                            blurRadius: 2,
-                          ),
-                          Shadow(
-                            color: Colors.black.withOpacity(0.2),
-                            offset: const Offset(1, 1),
-                            blurRadius: 2,
-                          ),
-                        ],
-                      ),
-                    ).animate(delay: 500.ms).fadeIn(duration: 400.ms),
-
-                    const SizedBox(height: 16),
-
-                    Obx(() {
-                      if (dashController.recentTransactions.isEmpty) {
-                        return Container(
-                          padding: const EdgeInsets.all(32),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.receipt_long_rounded,
-                                  size: 48,
-                                  color: Colors.grey.shade400,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No transactions yet',
-                                  style: AppText.poppins(
-                                    color: Colors.grey.shade500,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Scan a receipt to get started',
-                                  style: AppText.poppins(
-                                    color: Colors.grey.shade400,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-
-                      return Column(
-                        children: dashController.recentTransactions
-                            .take(5)
-                            .map((transaction) {
-                          final isPositive =
-                              transaction.transactionType == 'Cash In';
-                          final dateFormat = DateFormat('MMM dd, yyyy, h:mm a');
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _buildTransactionItem(
-                              transaction.transactionType.toUpperCase(),
-                              dateFormat.format(transaction.createdAt),
-                              '${isPositive ? '+' : '-'}${currencyFormat.format(transaction.totalAmount)}',
-                              isPositive,
-                            ),
-                          )
-                              .animate(delay: 600.ms)
-                              .fadeIn(duration: 400.ms)
-                              .slideX(begin: -0.2, end: 0);
-                        }).toList(),
-                      );
-                    }),
-
-                    const SizedBox(height: 100),
-                  ],
+                    child: const Icon(
+                      Icons.qr_code_scanner_rounded,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
                 ),
               ),
             ),
           ],
         ),
       ),
-
-      // Floating Bottom Navigation
-      bottomNavigationBar: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            margin: const EdgeInsets.all(20),
-            height: 70,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0E5EC),
-              borderRadius: BorderRadius.circular(35),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.white.withOpacity(0.8),
-                  offset: const Offset(-6, -6),
-                  blurRadius: 12,
-                ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  offset: const Offset(6, 6),
-                  blurRadius: 12,
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(Icons.home_rounded, 'Home', 0),
-                _buildNavItem(Icons.receipt_long_rounded, 'Logs', 1),
-                const SizedBox(width: 60), // Space for center scan button
-                _buildNavItem(Icons.settings_rounded, 'Settings', 2),
-                const SizedBox(width: 8), // Balance spacing
-              ],
-            ),
-          ),
-
-          // Center Scan Button
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 45,
-            child: Center(
-              child: GestureDetector(
-                onTap: () {
-                  Get.to(
-                    () => const ScanPage(),
-                    transition: Transition.fadeIn,
-                    duration: const Duration(milliseconds: 300),
-                  );
-                },
-                child: Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF64B5F6), Color(0xFF42A5F5)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF64B5F6).withOpacity(0.5),
-                        offset: const Offset(0, 8),
-                        blurRadius: 20,
-                      ),
-                      BoxShadow(
-                        color: Colors.white.withOpacity(0.8),
-                        offset: const Offset(-4, -4),
-                        blurRadius: 8,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.qr_code_scanner_rounded,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
-  Widget _buildQuickActionButton(String label, String amount, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+    _DashboardPalette palette,
+  ) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFE0E5EC),
+        color: palette.cardSurface,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: palette.cardBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.white.withOpacity(0.8),
-            offset: const Offset(-4, -4),
-            blurRadius: 10,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            offset: const Offset(4, 4),
-            blurRadius: 10,
+            color: palette.shadowDark,
+            offset: const Offset(2, 2),
+            blurRadius: 6,
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [color, color.withOpacity(0.8)],
-              ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Text(
-              label,
-              style: AppText.poppins(
-                color: Colors.white,
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-              ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 18,
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            amount,
-            style: AppText.poppins(
-              color: color,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+          const SizedBox(height: 8),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: AppText.poppins(
+                    color: palette.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: AppText.poppins(
+                    color: palette.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],
@@ -602,7 +976,10 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildLegend(String label, Color color) {
+  Widget _buildLegend(String label, Color color, [String? amount]) {
+    final theme = Theme.of(context);
+    final palette = _DashboardPalette(theme);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -621,85 +998,215 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ),
         const SizedBox(width: 6),
-        Text(
-          label,
-          style: AppText.poppins(
-            color: const Color(0xFF2C3E50),
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-          ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: AppText.poppins(
+                color: palette.textPrimary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (amount != null)
+              Text(
+                amount,
+                style: AppText.poppins(
+                  color: palette.textSecondary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildTransactionItem(
+  Widget _buildPeriodTab(String period, _DashboardPalette palette) {
+    final isSelected = dashController.selectedPeriod.value == period;
+    return GestureDetector(
+      onTap: () => dashController.setPeriod(period),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? palette.accentBlue : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          period,
+          style: AppText.poppins(
+            color: isSelected ? Colors.white : palette.textSecondary,
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLineChart(_DashboardPalette palette) {
+    final data = dashController.getChartData();
+
+    if (data.isEmpty) {
+      return Center(
+        child: Text(
+          'No data available',
+          style: AppText.poppins(
+            color: palette.textSecondary,
+            fontSize: 12,
+          ),
+        ),
+      );
+    }
+
+    final maxValue = data.values.isEmpty
+        ? 100.0
+        : data.values.reduce((a, b) => a > b ? a : b);
+    final entries = data.entries.toList();
+
+    return CustomPaint(
+      size: Size.infinite,
+      painter: LineChartPainter(
+        data: entries,
+        maxValue: maxValue > 0 ? maxValue : 100,
+        lineColor: palette.accentBlue,
+        dotColor: palette.accentGreen,
+        textColor: palette.textSecondary,
+        gridColor: palette.cardBorder,
+      ),
+    );
+  }
+
+  Widget _buildTimelineItem(
     String title,
     String date,
     String amount,
     bool isPositive,
+    bool isLast,
+    _DashboardPalette palette,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE0E5EC),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.white.withOpacity(0.8),
-            offset: const Offset(-4, -4),
-            blurRadius: 8,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            offset: const Offset(4, 4),
-            blurRadius: 8,
-          ),
-        ],
-      ),
+    final color =
+        isPositive ? const Color(0xFF4CAF50) : const Color(0xFFFF9800);
+
+    return IntrinsicHeight(
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppText.poppins(
-                    color: const Color(0xFF2C3E50),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+          // Timeline indicator
+          Column(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: color.withOpacity(0.5),
+                    width: 2,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  date,
-                  style: AppText.poppins(
-                    color: const Color(0xFF64B5F6),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
+                child: Icon(
+                  isPositive ? Icons.arrow_downward : Icons.arrow_upward,
+                  color: color,
+                  size: 20,
+                ),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          color.withOpacity(0.5),
+                          color.withOpacity(0.1),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: isPositive
-                  ? const Color(0xFF4CAF50).withOpacity(0.1)
-                  : const Color(0xFFF44336).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              amount,
-              style: AppText.poppins(
-                color: isPositive
-                    ? const Color(0xFF4CAF50)
-                    : const Color(0xFFF44336),
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+          const SizedBox(width: 16),
+          // Transaction details
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: palette.cardSurface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: palette.cardBorder),
+                boxShadow: [
+                  BoxShadow(
+                    color: palette.shadowDark,
+                    offset: const Offset(2, 2),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: AppText.poppins(
+                            color: palette.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          amount,
+                          style: AppText.poppins(
+                            color: color,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: palette.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        date,
+                        style: AppText.poppins(
+                          color: palette.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -709,7 +1216,10 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildNavItem(IconData icon, String label, int index) {
+    final theme = Theme.of(context);
+    final palette = _DashboardPalette(theme);
     final isSelected = _selectedIndex == index;
+
     return GestureDetector(
       onTap: () {
         if (index == 1) {
@@ -736,20 +1246,8 @@ class _DashboardPageState extends State<DashboardPage> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: isSelected
             ? BoxDecoration(
-                color: const Color(0xFFE0E5EC),
+                color: palette.accentBlue.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    offset: const Offset(4, 4),
-                    blurRadius: 8,
-                  ),
-                  BoxShadow(
-                    color: Colors.white.withOpacity(0.7),
-                    offset: const Offset(-4, -4),
-                    blurRadius: 8,
-                  ),
-                ],
               )
             : null,
         child: Column(
@@ -757,9 +1255,8 @@ class _DashboardPageState extends State<DashboardPage> {
           children: [
             Icon(
               icon,
-              color: isSelected
-                  ? const Color(0xFF64B5F6)
-                  : const Color(0xFF2C3E50).withOpacity(0.4),
+              color:
+                  isSelected ? palette.navIconActive : palette.navIconInactive,
               size: 24,
             ),
             const SizedBox(height: 4),
@@ -767,8 +1264,8 @@ class _DashboardPageState extends State<DashboardPage> {
               label,
               style: AppText.poppins(
                 color: isSelected
-                    ? const Color(0xFF64B5F6)
-                    : const Color(0xFF2C3E50).withOpacity(0.4),
+                    ? palette.navIconActive
+                    : palette.navIconInactive,
                 fontSize: 10,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
@@ -780,29 +1277,21 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _showLogoutDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = _DashboardPalette(theme);
+
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        backgroundColor: const Color(0xFFE0E5EC),
+        backgroundColor: palette.cardSurface,
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            color: const Color(0xFFE0E5EC),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.white.withOpacity(0.8),
-                offset: const Offset(-6, -6),
-                blurRadius: 12,
-              ),
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                offset: const Offset(6, 6),
-                blurRadius: 12,
-              ),
-            ],
+            color: palette.cardSurface,
+            border: Border.all(color: palette.cardBorder),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -830,7 +1319,7 @@ class _DashboardPageState extends State<DashboardPage> {
               Text(
                 'Logout',
                 style: AppText.poppins(
-                  color: const Color(0xFF2C3E50),
+                  color: palette.textPrimary,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
@@ -840,7 +1329,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 'Are you sure you want to logout?',
                 textAlign: TextAlign.center,
                 style: AppText.poppins(
-                  color: const Color(0xFF2C3E50).withOpacity(0.7),
+                  color: palette.textSecondary,
                   fontSize: 14,
                 ),
               ),
@@ -853,26 +1342,15 @@ class _DashboardPageState extends State<DashboardPage> {
                       child: Container(
                         height: 50,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE0E5EC),
+                          color: palette.background,
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.white.withOpacity(0.8),
-                              offset: const Offset(-4, -4),
-                              blurRadius: 8,
-                            ),
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              offset: const Offset(4, 4),
-                              blurRadius: 8,
-                            ),
-                          ],
+                          border: Border.all(color: palette.cardBorder),
                         ),
                         child: Center(
                           child: Text(
                             'Cancel',
                             style: AppText.poppins(
-                              color: const Color(0xFF2C3E50),
+                              color: palette.textPrimary,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -994,24 +1472,46 @@ class DonutChartPainter extends CustomPainter {
 
   DonutChartPainter({required this.sourceBreakdown});
 
+  // Color mapping for different sources
+  static const colorMap = {
+    'GCash': Color(0xFF4CAF50),
+    'Maya': Color(0xFF00C853),
+    'Palawan': Color(0xFFFF9800),
+    'MLhuillier': Color(0xFFF44336),
+    'Cebuana': Color(0xFF9C27B0),
+    'LBC': Color(0xFF2196F3),
+    'RD Pawnshop': Color(0xFFFF5722),
+    'Cash In': Color(0xFF64B5F6),
+  };
+
+  static Color getColorForSource(String source, int index) {
+    if (colorMap.containsKey(source)) {
+      return colorMap[source]!;
+    }
+    // Generate color based on index for unknown sources
+    final colors = [
+      const Color(0xFF4CAF50),
+      const Color(0xFFFF9800),
+      const Color(0xFF2196F3),
+      const Color(0xFFF44336),
+      const Color(0xFF9C27B0),
+      const Color(0xFFFF5722),
+      const Color(0xFF00BCD4),
+      const Color(0xFFCDDC39),
+    ];
+    return colors[index % colors.length];
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
-    final strokeWidth = 25.0;
+    const strokeWidth = 25.0;
 
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
-
-    // Color mapping for different sources
-    final colorMap = {
-      'GCash': const Color(0xFF4CAF50),
-      'Cash In': const Color(0xFF64B5F6),
-      'Palawan': const Color(0xFFFF9800),
-      'Pailia': const Color(0xFFF44336),
-    };
 
     // If no data, show default gray ring
     if (sourceBreakdown.isEmpty ||
@@ -1027,12 +1527,17 @@ class DonutChartPainter extends CustomPainter {
       return;
     }
 
-    double startAngle = -math.pi / 2;
+    // Calculate total for percentage calculation
+    final total = sourceBreakdown.values.fold(0.0, (sum, value) => sum + value);
 
-    sourceBreakdown.forEach((source, percentage) {
-      if (percentage > 0) {
-        paint.color = colorMap[source] ?? Colors.grey;
-        final sweepAngle = 2 * math.pi * percentage - 0.05;
+    double startAngle = -math.pi / 2;
+    int index = 0;
+
+    sourceBreakdown.forEach((source, amount) {
+      if (amount > 0) {
+        paint.color = getColorForSource(source, index);
+        final percentage = amount / total;
+        final sweepAngle = 2 * math.pi * percentage - 0.02;
 
         canvas.drawArc(
           Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
@@ -1042,9 +1547,161 @@ class DonutChartPainter extends CustomPainter {
           paint,
         );
 
-        startAngle += sweepAngle + 0.05;
+        startAngle += sweepAngle + 0.02;
+        index++;
       }
     });
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class LineChartPainter extends CustomPainter {
+  final List<MapEntry<String, double>> data;
+  final double maxValue;
+  final Color lineColor;
+  final Color dotColor;
+  final Color textColor;
+  final Color gridColor;
+
+  LineChartPainter({
+    required this.data,
+    required this.maxValue,
+    required this.lineColor,
+    required this.dotColor,
+    required this.textColor,
+    required this.gridColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (data.isEmpty) return;
+
+    const padding = 40.0;
+    const bottomPadding = 30.0;
+    final chartWidth = size.width - padding * 2;
+    final chartHeight = size.height - padding - bottomPadding;
+
+    // Draw grid lines
+    final gridPaint = Paint()
+      ..color = gridColor
+      ..strokeWidth = 0.5;
+
+    for (int i = 0; i <= 4; i++) {
+      final y = padding + (chartHeight * i / 4);
+      canvas.drawLine(
+        Offset(padding, y),
+        Offset(size.width - padding, y),
+        gridPaint,
+      );
+    }
+
+    // Draw line and dots
+    final linePaint = Paint()
+      ..color = lineColor
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final dotPaint = Paint()
+      ..color = dotColor
+      ..style = PaintingStyle.fill;
+
+    final dotBorderPaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    final points = <Offset>[];
+
+    for (int i = 0; i < data.length; i++) {
+      final x = padding + (chartWidth * i / (data.length - 1));
+      final normalizedValue = data[i].value / maxValue;
+      final y = padding + chartHeight - (chartHeight * normalizedValue);
+
+      points.add(Offset(x, y));
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    // Draw gradient below line
+    final gradientPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          lineColor.withOpacity(0.3),
+          lineColor.withOpacity(0.0),
+        ],
+      ).createShader(Rect.fromLTWH(0, padding, size.width, chartHeight));
+
+    final fillPath = Path.from(path);
+    fillPath.lineTo(points.last.dx, padding + chartHeight);
+    fillPath.lineTo(points.first.dx, padding + chartHeight);
+    fillPath.close();
+    canvas.drawPath(fillPath, gradientPaint);
+
+    // Draw line
+    canvas.drawPath(path, linePaint);
+
+    // Draw dots
+    for (final point in points) {
+      canvas.drawCircle(point, 5, dotPaint);
+      canvas.drawCircle(point, 5, dotBorderPaint);
+    }
+
+    // Draw labels
+    for (int i = 0; i < data.length; i++) {
+      final x = padding + (chartWidth * i / (data.length - 1));
+
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: data[i].key,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        textDirection: ui.TextDirection.ltr,
+        textAlign: TextAlign.center,
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(x - textPainter.width / 2, size.height - 20),
+      );
+    }
+
+    // Draw value labels on Y axis
+    final currencyFormat = NumberFormat.currency(symbol: '₱', decimalDigits: 0);
+    for (int i = 0; i <= 4; i++) {
+      final value = maxValue * (4 - i) / 4;
+      final y = padding + (chartHeight * i / 4);
+
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: value > 0 ? currencyFormat.format(value) : '₱0',
+          style: TextStyle(
+            color: textColor,
+            fontSize: 9,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        textDirection: ui.TextDirection.ltr,
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(5, y - textPainter.height / 2),
+      );
+    }
   }
 
   @override

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:g/utils/app_text.dart';
 import 'controllers/app_controller.dart';
+import 'controllers/theme_controller.dart';
 import 'pages/landing_page.dart';
 import 'pages/login_page.dart';
-import 'pages/dashboard_page.dart';
 import 'firebase_options.dart';
+import 'utils/app_theme.dart';
+import 'widgets/global_loading_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,7 @@ void main() async {
   );
   // Initialize AppController
   Get.put(AppController());
+  Get.put(ThemeController());
   runApp(const MyApp());
 }
 
@@ -24,68 +26,24 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: 'Girish Digital App',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        // Neumorphism theme: Light grey background with light blue accents
-        scaffoldBackgroundColor: const Color(0xFFE0E5EC),
-        colorScheme: ColorScheme.light(
-          primary: const Color(0xFF64B5F6), // Light blue
-          secondary: const Color(0xFF42A5F5),
-          tertiary: const Color(0xFF90CAF9),
-          surface: const Color(0xFFE0E5EC),
-          background: const Color(0xFFE0E5EC),
-          onPrimary: Colors.white,
-          onSecondary: Colors.white,
-          onSurface: const Color(0xFF2C3E50), // Dark blue-grey
-          onBackground: const Color(0xFF2C3E50),
-        ),
-        useMaterial3: true,
-        textTheme: ThemeData.light().textTheme.apply(
-              bodyColor: const Color(0xFF2C3E50),
-              displayColor: const Color(0xFF2C3E50),
-            ),
-        cardTheme: CardTheme(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          color: const Color(0xFFE0E5EC),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            backgroundColor: const Color(0xFF64B5F6),
-            foregroundColor: Colors.white,
-            textStyle: AppText.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFFE0E5EC),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFF64B5F6), width: 2),
-          ),
-        ),
+    final ThemeController themeController = Get.find<ThemeController>();
+    return Obx(
+      () => GetMaterialApp(
+        title: 'Girish Digital App',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: themeController.themeMode.value,
+        builder: (context, child) {
+          return Stack(
+            children: [
+              child ?? const SizedBox.shrink(),
+              const GlobalLoadingOverlay(),
+            ],
+          );
+        },
+        home: const AuthWrapper(),
       ),
-      home: const AuthWrapper(),
     );
   }
 }
@@ -103,14 +61,7 @@ class AuthWrapper extends StatelessWidget {
       builder: (context, snapshot) {
         // Show loading while checking auth state
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: Color(0xFFE0E5EC),
-            body: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF64B5F6)),
-              ),
-            ),
-          );
+          return const _AuthLoadingScaffold();
         }
 
         // User is logged in
@@ -141,19 +92,29 @@ class AuthWrapper extends StatelessWidget {
           });
 
           // Show temporary loading screen
-          return const Scaffold(
-            backgroundColor: Color(0xFFE0E5EC),
-            body: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF64B5F6)),
-              ),
-            ),
-          );
+          return const _AuthLoadingScaffold();
         }
 
         // User is not logged in
         return const LandingPage();
       },
+    );
+  }
+}
+
+class _AuthLoadingScaffold extends StatelessWidget {
+  const _AuthLoadingScaffold();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+        ),
+      ),
     );
   }
 }
