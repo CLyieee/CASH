@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:g/utils/app_text.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/app_controller.dart';
+import '../controllers/theme_controller.dart';
 import '../services/biometric_auth_service.dart';
 import 'dashboard_page.dart';
 
@@ -19,6 +20,7 @@ class _LoginPageState extends State<LoginPage> {
   final int _pinLength = 4;
   final BiometricAuthService _biometricService = BiometricAuthService();
   final RxBool _isBiometricAvailable = false.obs;
+  final ThemeController _themeController = Get.find<ThemeController>();
 
   @override
   void initState() {
@@ -126,35 +128,60 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Widget _buildNumberButton(String number) {
-    return GestureDetector(
-      onTap: () => _onNumberPressed(number),
-      child: Container(
-        width: 70,
-        height: 70,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0xFFE0E5EC),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.white.withOpacity(0.8),
-              offset: const Offset(-4, -4),
-              blurRadius: 10,
+  Widget _buildNumberButton(
+    String number,
+    Color cardColor,
+    Color textColor,
+    bool isDark,
+    double buttonSize,
+    bool isSmallScreen,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _onNumberPressed(number),
+        borderRadius: BorderRadius.circular(buttonSize / 2),
+        splashColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        highlightColor: Theme.of(context).colorScheme.primary.withOpacity(0.05),
+        child: Container(
+          width: buttonSize,
+          height: buttonSize,
+          decoration: BoxDecoration(
+            color: cardColor,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.black.withOpacity(0.05),
+              width: 1,
             ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              offset: const Offset(4, 4),
-              blurRadius: 10,
-            ),
-          ],
-        ),
-        child: Center(
-          child: Text(
-            number,
-            style: AppText.poppins(
-              color: const Color(0xFF2C3E50),
-              fontSize: 28,
-              fontWeight: FontWeight.w600,
+            boxShadow: isDark
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.4),
+                      offset: const Offset(0, 4),
+                      blurRadius: 12,
+                      spreadRadius: -2,
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      offset: const Offset(0, 2),
+                      blurRadius: 8,
+                      spreadRadius: 0,
+                    ),
+                  ],
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: AppText.poppins(
+                color: textColor,
+                fontSize: isSmallScreen ? 24 : 28,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
         ),
@@ -162,66 +189,58 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildDeleteButton() {
-    return GestureDetector(
-      onTap: _onDeletePressed,
-      child: Container(
-        width: 70,
-        height: 70,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0xFFE0E5EC),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.white.withOpacity(0.8),
-              offset: const Offset(-4, -4),
-              blurRadius: 10,
+  Widget _buildActionButton(
+    IconData icon,
+    VoidCallback onTap,
+    Color cardColor,
+    Color iconColor,
+    bool isDark,
+    double buttonSize,
+    bool isSmallScreen,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(buttonSize / 2),
+        splashColor: iconColor.withOpacity(0.15),
+        highlightColor: iconColor.withOpacity(0.08),
+        child: Container(
+          width: buttonSize,
+          height: buttonSize,
+          decoration: BoxDecoration(
+            color: cardColor,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.black.withOpacity(0.05),
+              width: 1,
             ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              offset: const Offset(4, 4),
-              blurRadius: 10,
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.backspace_outlined,
-            color: Color(0xFF64B5F6),
-            size: 28,
+            boxShadow: isDark
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.4),
+                      offset: const Offset(0, 4),
+                      blurRadius: 12,
+                      spreadRadius: -2,
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      offset: const Offset(0, 2),
+                      blurRadius: 8,
+                      spreadRadius: 0,
+                    ),
+                  ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBiometricButton() {
-    return GestureDetector(
-      onTap: _authenticateWithBiometric,
-      child: Container(
-        width: 70,
-        height: 70,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0xFFE0E5EC),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.white.withOpacity(0.8),
-              offset: const Offset(-4, -4),
-              blurRadius: 10,
+          child: Center(
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: isSmallScreen ? 26 : 30,
             ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              offset: const Offset(4, 4),
-              blurRadius: 10,
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.fingerprint,
-            color: Color(0xFF64B5F6),
-            size: 32,
           ),
         ),
       ),
@@ -230,229 +249,313 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFE0E5EC),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0E5EC),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.white.withOpacity(0.8),
-                  offset: const Offset(-4, -4),
-                  blurRadius: 8,
-                ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  offset: const Offset(4, 4),
-                  blurRadius: 8,
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.arrow_back_rounded,
-              color: Color(0xFF2C3E50),
-            ),
-          ),
-          onPressed: () => Get.back(),
-        ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 5),
+    return Obx(() {
+      final theme = Theme.of(context);
+      final isDark = _themeController.themeMode.value == ThemeMode.dark;
+      final size = MediaQuery.of(context).size;
+      final isSmallScreen = size.height < 700;
 
-              // Title
-              Text(
-                'Enter PIN',
-                style: AppText.poppins(
-                  color: const Color(0xFF2C3E50),
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  shadows: [
-                    Shadow(
-                      color: Colors.white.withOpacity(0.8),
-                      offset: const Offset(-2, -2),
-                      blurRadius: 4,
-                    ),
-                    Shadow(
-                      color: Colors.black.withOpacity(0.2),
-                      offset: const Offset(2, 2),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-              ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.3, end: 0),
+      final backgroundColor =
+          isDark ? const Color(0xFF0F1419) : const Color(0xFFF8F9FA);
+      final cardColor = isDark ? const Color(0xFF1C2128) : Colors.white;
+      final textPrimary =
+          isDark ? const Color(0xFFE6EDF3) : const Color(0xFF1F2937);
+      final textMuted =
+          isDark ? const Color(0xFF8B949E) : const Color(0xFF6B7280);
+      final accentColor = theme.colorScheme.primary;
 
-              const Spacer(),
+      // Responsive sizing
+      final iconSize = isSmallScreen ? 80.0 : 100.0;
+      final titleSize = isSmallScreen ? 24.0 : 32.0;
+      final buttonSize = isSmallScreen ? 64.0 : 75.0;
+      final verticalPadding = isSmallScreen ? 16.0 : 32.0;
 
-              // Lock Icon
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE0E5EC),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.white.withOpacity(0.8),
-                      offset: const Offset(-6, -6),
-                      blurRadius: 12,
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      offset: const Offset(6, 6),
-                      blurRadius: 12,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Container(
-                    width: 55,
-                    height: 55,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF64B5F6),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF64B5F6).withOpacity(0.5),
-                          blurRadius: 20,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.lock_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+      return Scaffold(
+        backgroundColor: backgroundColor,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight,
+                    maxWidth: 600,
                   ),
-                ),
-              ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
-
-              const SizedBox(height: 24),
-
-              Text(
-                'Enter your 4-digit PIN',
-                style: AppText.poppins(
-                  color: const Color(0xFF64B5F6),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // PIN Display
-              Obx(() => Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(_pinLength, (index) {
-                      return Container(
-                        width: 50,
-                        height: 50,
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE0E5EC),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: index < _pin.value.length
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    offset: const Offset(4, 4),
-                                    blurRadius: 8,
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: size.width * 0.06,
+                        vertical: 20,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Back Button
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => Get.back(),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: cardColor,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isDark
+                                          ? Colors.white.withOpacity(0.05)
+                                          : Colors.black.withOpacity(0.05),
+                                    ),
                                   ),
-                                  BoxShadow(
-                                    color: Colors.white.withOpacity(0.7),
-                                    offset: const Offset(-4, -4),
-                                    blurRadius: 8,
+                                  child: Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    color: textPrimary,
+                                    size: 20,
                                   ),
-                                ]
-                              : [
-                                  BoxShadow(
-                                    color: Colors.white.withOpacity(0.8),
-                                    offset: const Offset(-4, -4),
-                                    blurRadius: 8,
-                                  ),
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    offset: const Offset(4, 4),
-                                    blurRadius: 8,
-                                  ),
-                                ],
-                        ),
-                        child: Center(
-                          child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: index < _pin.value.length
-                                  ? const Color(0xFF64B5F6)
-                                  : Colors.transparent,
-                              shape: BoxShape.circle,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    }),
-                  )),
 
-              const Spacer(),
+                          SizedBox(height: verticalPadding),
 
-              // Number Keypad
-              Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildNumberButton('1'),
-                      _buildNumberButton('2'),
-                      _buildNumberButton('3'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildNumberButton('4'),
-                      _buildNumberButton('5'),
-                      _buildNumberButton('6'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildNumberButton('7'),
-                      _buildNumberButton('8'),
-                      _buildNumberButton('9'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Obx(() => _isBiometricAvailable.value
-                          ? _buildBiometricButton()
-                          : const SizedBox(width: 70, height: 70)),
-                      _buildNumberButton('0'),
-                      _buildDeleteButton(),
-                    ],
-                  ),
-                ],
-              ),
+                          // Animated Logo/Icon
+                          Container(
+                            width: iconSize,
+                            height: iconSize,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  accentColor,
+                                  accentColor.withOpacity(0.8),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: accentColor.withOpacity(0.4),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.shield_rounded,
+                              color: Colors.white,
+                              size: iconSize * 0.5,
+                            ),
+                          )
+                              .animate()
+                              .scale(
+                                duration: 800.ms,
+                                curve: Curves.elasticOut,
+                              )
+                              .shimmer(duration: 1500.ms, delay: 600.ms),
 
-              const SizedBox(height: 20),
-            ],
+                          SizedBox(height: verticalPadding * 0.75),
+
+                          // Title
+                          Text(
+                            'Welcome Back',
+                            style: AppText.poppins(
+                              color: textPrimary,
+                              fontSize: titleSize,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.5,
+                            ),
+                          )
+                              .animate()
+                              .fadeIn(duration: 500.ms, delay: 200.ms)
+                              .slideY(begin: 0.3, end: 0),
+
+                          const SizedBox(height: 8),
+
+                          Text(
+                            'Enter your PIN to continue',
+                            style: AppText.poppins(
+                              color: textMuted,
+                              fontSize: isSmallScreen ? 14 : 15,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          )
+                              .animate()
+                              .fadeIn(duration: 500.ms, delay: 300.ms)
+                              .slideY(begin: 0.3, end: 0),
+
+                          SizedBox(height: verticalPadding * 1.2),
+
+                          // PIN Display
+                          Obx(() => Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children:
+                                        List.generate(_pinLength, (index) {
+                                      final isFilled =
+                                          index < _pin.value.length;
+                                      return AnimatedContainer(
+                                        duration:
+                                            const Duration(milliseconds: 200),
+                                        curve: Curves.easeOutCubic,
+                                        width: isSmallScreen ? 18 : 20,
+                                        height: isSmallScreen ? 18 : 20,
+                                        margin: EdgeInsets.symmetric(
+                                          horizontal: isSmallScreen ? 10 : 14,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isFilled
+                                              ? accentColor
+                                              : Colors.transparent,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: isFilled
+                                                ? accentColor
+                                                : textMuted.withOpacity(0.3),
+                                            width: 2.5,
+                                          ),
+                                          boxShadow: isFilled
+                                              ? [
+                                                  BoxShadow(
+                                                    color: accentColor
+                                                        .withOpacity(0.3),
+                                                    blurRadius: 8,
+                                                    spreadRadius: 1,
+                                                  ),
+                                                ]
+                                              : [],
+                                        ),
+                                      )
+                                          .animate(
+                                            key: ValueKey('$index-$isFilled'),
+                                          )
+                                          .scale(
+                                            duration: 200.ms,
+                                            begin: const Offset(0.8, 0.8),
+                                            end: const Offset(1, 1),
+                                          );
+                                    }),
+                                  ))
+                              .animate()
+                              .fadeIn(duration: 500.ms, delay: 400.ms)
+                              .slideY(begin: 0.2, end: 0),
+
+                          const Spacer(),
+
+                          // Number Keypad
+                          Container(
+                            constraints: BoxConstraints(
+                              maxWidth: isSmallScreen ? 320 : 380,
+                            ),
+                            child: Column(
+                              children: [
+                                _buildKeypadRow(
+                                  ['1', '2', '3'],
+                                  cardColor,
+                                  textPrimary,
+                                  isDark,
+                                  buttonSize,
+                                  isSmallScreen,
+                                ),
+                                SizedBox(height: isSmallScreen ? 12 : 16),
+                                _buildKeypadRow(
+                                  ['4', '5', '6'],
+                                  cardColor,
+                                  textPrimary,
+                                  isDark,
+                                  buttonSize,
+                                  isSmallScreen,
+                                ),
+                                SizedBox(height: isSmallScreen ? 12 : 16),
+                                _buildKeypadRow(
+                                  ['7', '8', '9'],
+                                  cardColor,
+                                  textPrimary,
+                                  isDark,
+                                  buttonSize,
+                                  isSmallScreen,
+                                ),
+                                SizedBox(height: isSmallScreen ? 12 : 16),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    Obx(() => _isBiometricAvailable.value
+                                        ? _buildActionButton(
+                                            Icons.fingerprint_rounded,
+                                            _authenticateWithBiometric,
+                                            cardColor,
+                                            accentColor,
+                                            isDark,
+                                            buttonSize,
+                                            isSmallScreen,
+                                          )
+                                        : SizedBox(
+                                            width: buttonSize,
+                                            height: buttonSize,
+                                          )),
+                                    _buildNumberButton(
+                                      '0',
+                                      cardColor,
+                                      textPrimary,
+                                      isDark,
+                                      buttonSize,
+                                      isSmallScreen,
+                                    ),
+                                    _buildActionButton(
+                                      Icons.backspace_outlined,
+                                      _onDeletePressed,
+                                      cardColor,
+                                      textMuted,
+                                      isDark,
+                                      buttonSize,
+                                      isSmallScreen,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          )
+                              .animate()
+                              .fadeIn(duration: 500.ms, delay: 500.ms)
+                              .slideY(begin: 0.3, end: 0),
+
+                          SizedBox(height: verticalPadding * 0.75),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
-      ),
+      );
+    });
+  }
+
+  Widget _buildKeypadRow(
+    List<String> numbers,
+    Color cardColor,
+    Color textColor,
+    bool isDark,
+    double buttonSize,
+    bool isSmallScreen,
+  ) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: numbers
+          .map((num) => _buildNumberButton(
+                num,
+                cardColor,
+                textColor,
+                isDark,
+                buttonSize,
+                isSmallScreen,
+              ))
+          .toList(),
     );
   }
 }

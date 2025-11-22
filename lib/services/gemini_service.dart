@@ -6,12 +6,12 @@ import '../models/receipt_model.dart';
 
 class GeminiService {
   static const String _apiKey =
-      'AIzaSyD3GfaYjKXSnRWG2gTD55mm9vPhQKRD8WE'; // Replace with your actual API key
+      'AIzaSyBr3kNFm_wiC-m8ykhWRS4NaLWfCGeJ2Hc'; // Replace with your NEW API key from Google AI Studio
   late final GenerativeModel _model;
 
   GeminiService() {
     _model = GenerativeModel(
-      model: 'gemini-pro',
+      model: 'gemini-2.5-flash',
       apiKey: _apiKey,
     );
   }
@@ -40,7 +40,7 @@ class GeminiService {
     }
   }
 
-  /// Generate content with image (using gemini-1.5-flash)
+  /// Generate content with image (using gemini-2.5-flash)
   Future<String?> generateContentWithImage(
     String prompt,
     List<int> imageBytes, {
@@ -48,7 +48,7 @@ class GeminiService {
   }) async {
     try {
       final model = GenerativeModel(
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         apiKey: _apiKey,
       );
 
