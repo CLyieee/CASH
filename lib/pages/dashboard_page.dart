@@ -11,6 +11,7 @@ import 'scan_page.dart';
 import 'transaction_logs_page.dart';
 import 'settings_page.dart';
 import 'landing_page.dart';
+import 'ai_chat_page.dart';
 import 'dart:math' as math;
 
 class _DashboardPalette {
@@ -819,85 +820,41 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       ),
 
-      // Floating Bottom Navigation
-      bottomNavigationBar: SafeArea(
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              margin: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-              height: 70,
-              decoration: BoxDecoration(
-                color: palette.cardSurface,
-                borderRadius: BorderRadius.circular(35),
-                border: Border.all(color: palette.cardBorder),
-                boxShadow: [
-                  BoxShadow(
-                    color: palette.shadowDark,
-                    offset: const Offset(0, 4),
-                    blurRadius: 12,
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildNavItem(Icons.home_rounded, 'Home', 0),
-                  _buildNavItem(Icons.receipt_long_rounded, 'Logs', 1),
-                  const SizedBox(width: 60), // Space for center scan button
-                  _buildNavItem(Icons.settings_rounded, 'Settings', 2),
-                  const SizedBox(width: 8), // Balance spacing
-                ],
-              ),
+      // Modern Bottom Navigation Bar
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: palette.cardSurface,
+          border: Border(
+            top: BorderSide(
+              color: palette.cardBorder,
+              width: 1,
             ),
-
-            // Center Scan Button
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 45,
-              child: Center(
-                child: GestureDetector(
-                  onTap: () {
-                    Get.to(
-                      () => const ScanPage(),
-                      transition: Transition.fadeIn,
-                      duration: const Duration(milliseconds: 300),
-                    );
-                  },
-                  child: Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: palette.isDark
-                            ? [const Color(0xFF5BA3E8), const Color(0xFF4A8FCF)]
-                            : [
-                                const Color(0xFF64B5F6),
-                                const Color(0xFF42A5F5)
-                              ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: palette.accentBlue.withOpacity(0.5),
-                          offset: const Offset(0, 8),
-                          blurRadius: 20,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.qr_code_scanner_rounded,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                  ),
-                ),
-              ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: palette.isDark
+                  ? Colors.black.withOpacity(0.3)
+                  : Colors.black.withOpacity(0.08),
+              offset: const Offset(0, -2),
+              blurRadius: 12,
             ),
           ],
+        ),
+        child: SafeArea(
+          child: SizedBox(
+            height: 65,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(Icons.home_rounded, 'Home', 0, palette),
+                _buildNavItem(
+                    Icons.receipt_long_rounded, 'History', 1, palette),
+                _buildScanButton(palette),
+                _buildNavItem(Icons.smart_toy_rounded, 'AI Chat', 3, palette),
+                _buildNavItem(Icons.settings_rounded, 'Settings', 2, palette),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1215,62 +1172,148 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, int index) {
-    final theme = Theme.of(context);
-    final palette = _DashboardPalette(theme);
+  Widget _buildNavItem(
+    IconData icon,
+    String label,
+    int index,
+    _DashboardPalette palette,
+  ) {
     final isSelected = _selectedIndex == index;
 
-    return GestureDetector(
-      onTap: () {
-        if (index == 1) {
-          // Navigate to Transaction Logs page
-          Get.to(
-            () => const TransactionLogsPage(),
-            transition: Transition.rightToLeft,
-            duration: const Duration(milliseconds: 300),
-          );
-        } else if (index == 2) {
-          // Navigate to Settings page
-          Get.to(
-            () => const SettingsPage(),
-            transition: Transition.rightToLeft,
-            duration: const Duration(milliseconds: 300),
-          );
-        } else {
-          setState(() {
-            _selectedIndex = index;
-          });
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: isSelected
-            ? BoxDecoration(
-                color: palette.accentBlue.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20),
-              )
-            : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color:
-                  isSelected ? palette.navIconActive : palette.navIconInactive,
-              size: 24,
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            if (index == 1) {
+              // Navigate to Transaction Logs page
+              Get.to(
+                () => const TransactionLogsPage(),
+                transition: Transition.cupertino,
+                duration: const Duration(milliseconds: 400),
+              );
+            } else if (index == 2) {
+              // Navigate to Settings page
+              Get.to(
+                () => const SettingsPage(),
+                transition: Transition.cupertino,
+                duration: const Duration(milliseconds: 400),
+              );
+            } else if (index == 3) {
+              // Navigate to AI Chat page
+              Get.to(
+                () => const AIChatPage(),
+                transition: Transition.cupertino,
+                duration: const Duration(milliseconds: 400),
+              );
+            } else {
+              setState(() {
+                _selectedIndex = index;
+              });
+            }
+          },
+          borderRadius: BorderRadius.circular(16),
+          splashColor: palette.accentBlue.withOpacity(0.1),
+          highlightColor: palette.accentBlue.withOpacity(0.05),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.all(6),
+                  decoration: isSelected
+                      ? BoxDecoration(
+                          color: palette.accentBlue.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        )
+                      : null,
+                  child: Icon(
+                    icon,
+                    color: isSelected
+                        ? palette.accentBlue
+                        : palette.navIconInactive,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: AppText.poppins(
+                    color: isSelected
+                        ? palette.accentBlue
+                        : palette.navIconInactive,
+                    fontSize: 10,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: AppText.poppins(
-                color: isSelected
-                    ? palette.navIconActive
-                    : palette.navIconInactive,
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScanButton(_DashboardPalette palette) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          Get.to(
+            () => const ScanPage(),
+            transition: Transition.zoom,
+            duration: const Duration(milliseconds: 400),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      palette.accentBlue,
+                      palette.accentBlue.withOpacity(0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(13),
+                  boxShadow: [
+                    BoxShadow(
+                      color: palette.accentBlue.withOpacity(0.4),
+                      offset: const Offset(0, 2),
+                      blurRadius: 8,
+                      spreadRadius: 0,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.qr_code_scanner_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                'Scan',
+                style: AppText.poppins(
+                  color: palette.accentBlue,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
