@@ -134,19 +134,27 @@ class GeminiService {
     String mimeType = 'image/jpeg',
   }) async {
     final prompt = '''
-You are analyzing a MONEY TRANSFER receipt/transaction image.
+You are analyzing a MONEY TRANSFER or BANK TRANSFER receipt image.
+
+⚠️⚠️⚠️ MOST IMPORTANT RULE ⚠️⚠️⚠️
+FIRST: Look at the TITLE/HEADER of the receipt!
+- If it says "Bank Transfer Complete" → This is a BANK TRANSFER (use bank_transfer JSON format)
+- If it says "Send Money" or has phone numbers → This is a MONEY TRANSFER
+
+DO NOT SKIP THIS STEP! The title tells you which format to use!
 
 🔍 STEP 1: READ ALL TEXT FIRST (CRITICAL!)
 Before extracting any fields, you MUST:
-1. Read EVERY piece of text visible in the image
-2. List out ALL text you can see, organized by sections
-3. Identify what type of document this is
-4. Understand the layout and structure
+1. Read the TITLE at the top (Bank Transfer Complete? Send Money?)
+2. Read EVERY piece of text visible in the image
+3. List out ALL text you can see, organized by sections
+4. Identify what type of document this is (BANK or MONEY transfer)
+5. Understand the layout and structure
 
 This ensures accuracy - you can't extract what you haven't read yet!
 
 🔍 STEP 2: THEN EXTRACT SPECIFIC FIELDS
-After reading all text, extract the required transaction details.
+After reading all text and identifying the type, extract the required transaction details.
 
 ═══════════════════════════════════════════════════════════════
 
@@ -219,7 +227,8 @@ STEP 1: READ ALL TEXT IN THE IMAGE
 
 STEP 2: IDENTIFY NAME PATTERNS
 Look for text that matches these patterns ANYWHERE in the image:
-- MASKED NAMES: "MA****N M.", "JO••••A D.", "AN***A L." (letters + asterisks + letter + space + initial)
+- GCASH MASKED NAMES: "CL*****M M.", "MA****N M.", "JO••••A D.", "AN***A L." 
+  (2 letters + asterisks/dots + 1 letter + space + middle initial)
 - FULL NAMES: "MARIA CLARA CRUZ", "JUAN DELA CRUZ", "Maria Cruz"
 - ABBREVIATED: "M. CRUZ", "J. SANTOS", "Maria C."
 - Any combination of letters that looks like a person's name
@@ -423,9 +432,48 @@ specific fields. You need to SEE everything before you can FIND the right data.
 📋 EXTRACTION FORMAT (AFTER READING)
 ═══════════════════════════════════════════════════════════════
 
-Extract the following information in JSON format:
+⚠️ CRITICAL FIRST STEP: DETECT TRANSACTION TYPE
 
+READ THE TITLE/HEADER TEXT FIRST!
+
+🏦 THIS IS A BANK TRANSFER IF YOU SEE:
+1. Title contains: "Bank Transfer Complete" OR "Bank Transfer" OR "To Bank Account"
+2. Fields visible: "Bank", "Account No.", "Account Name"
+3. Has "Receipt sent to" with an email address
+4. Shows bank name like: MariBank, BPI, BDO, Metrobank, UnionBank, Security Bank
+5. Account number format: masked dots like "******0594" or full number
+6. NO phone number field with +63
+
+💸 THIS IS A MONEY TRANSFER IF YOU SEE:
+1. Title contains: "Send Money" OR "Money Transfer" OR "Cash In" OR "Transfer Complete"
+2. Has mobile/phone number field with +63
+3. Recipient name in format: "MA****N M." or full name
+4. NO "Bank" or "Account No." fields
+5. NO email field
+
+⚠️ IF YOU SEE "Bank Transfer Complete" → IT IS DEFINITELY A BANK TRANSFER!
+
+THEN: Extract the appropriate fields based on transaction type
+
+FOR BANK TRANSFER, use this JSON format:
 {
+  "transaction_type": "bank_transfer",
+  "bank_name": "Name of the bank (e.g., MariBank, BPI, BDO)",
+  "account_number": "Bank account number (e.g., ******0594, full or masked)",
+  "account_name": "Account holder name (e.g., CLYTHEM O.)",
+  "receipt_email": "Email where receipt was sent (e.g., eduardbertillo2@gmail.com)",
+  "amount": "Transfer amount (numeric only, e.g., 500.00)",
+  "bank_fee": "Bank transfer fee (numeric only, e.g., 15.00)",
+  "total_amount": "Total amount including bank fee (numeric only)",
+  "reference_number": "Transaction/Reference number (Ref No. - NOT InstaPay Invoice No.)",
+  "date": "Transaction date (format: YYYY-MM-DD)",
+  "time": "Transaction time (format: HH:MM AM/PM)",
+  "source": "Service provider name (GCash, Maya, etc.)"
+}
+
+FOR MONEY TRANSFER, use this JSON format:
+{
+  "transaction_type": "money_transfer",
   "recipient_name": "EXACT name as shown (keep *, •, or · if present, otherwise full name)",
   "phone_number": "Full phone number with country code",
   "amount": "The amount being sent (numeric only, e.g., 1400.00)",
@@ -438,12 +486,133 @@ Extract the following information in JSON format:
 }
 
 CRITICAL EXTRACTION RULES:
+
+FOR BANK TRANSFERS (STEP-BY-STEP):
+
+📝 EXACT FORMAT TO LOOK FOR:
+The receipt will have this EXACT structure - labels on LEFT, values on RIGHT:
+
+Bank Transfer Complete  ← This confirms it's a bank transfer!
+Sent via GCash
+
+Bank                    [BANK NAME HERE - on the RIGHT side]
+Account No.             [******0594 HERE - on the RIGHT side]  
+Account Name            [NAME HERE - on the RIGHT side]
+Receipt sent to         [email@gmail.com HERE - on the RIGHT side]
+Transfer Date           [DATE TIME HERE - on the RIGHT side]
+
+Transfer Amount         [500.00 HERE - on the RIGHT side]
++Fee                    [15.00 HERE - on the RIGHT side]
+
+Total                   ₱ [515.00 HERE - LARGE NUMBER on the RIGHT]
+
+InstaPay Invoice No.    [5575967 - IGNORE THIS - this is NOT the reference]
+Ref No.                 [5034124744068 - USE THIS - this IS the reference]
+
+⚠️ CRITICAL: Read LEFT column for labels, RIGHT column for values!
+⚠️ The layout is TWO COLUMNS - don't mix them up!
+
+⚠️ EXTRACTION STEPS:
+
+1. BANK NAME: 
+   - Label: "Bank" (left side)
+   - Value: On the RIGHT side (e.g., "MariBank")
+   - Extract: The bank name exactly as shown
+
+2. ACCOUNT NUMBER:
+   - Label: "Account No." (left side)
+   - Value: On the RIGHT side (e.g., "******0594")
+   - Extract: Keep the asterisks and dots exactly as shown
+
+3. ACCOUNT NAME:
+   - Label: "Account Name" (left side)
+   - Value: On the RIGHT side (e.g., "CLYTHEM O.")
+   - Extract: Exact name including dots and capitalization
+
+4. RECEIPT EMAIL:
+   - Label: "Receipt sent to" (left side)
+   - Value: On the RIGHT side (e.g., "eduardbertillo2@gmail.com")
+   - Extract: Full email address
+
+5. TRANSFER AMOUNT:
+   - Label: "Transfer Amount" (left side)
+   - Value: On the RIGHT side (e.g., "500.00")
+   - Extract: ONLY the number, remove commas and ₱
+
+6. BANK FEE:
+   - Label: "+Fee" (left side)
+   - Value: On the RIGHT side (e.g., "15.00")
+   - Extract: ONLY the number
+
+7. TOTAL:
+   - Label: "Total" (left side)
+   - Value: Large number with ₱ symbol (e.g., "₱ 515.00")
+   - Extract: ONLY the number
+
+8. TRANSFER DATE:
+   - Label: "Transfer Date" (left side)
+   - Value: On the RIGHT side (e.g., "Oct 29,2025 02:36 PM")
+   - Convert to: "2025-10-29" format for date
+   - Extract time: "02:36 PM"
+
+9. REFERENCE NUMBER (IMPORTANT!):
+   - Look for "Ref No." label (NOT "InstaPay Invoice No.")
+   - Value: Long number on the RIGHT (e.g., "5034124744068")
+   - Extract: This number, NOT the InstaPay Invoice number above it
+
+⚠️ DO NOT extract InstaPay Invoice No. - that's NOT the reference number!
+
+📋 EXAMPLE BANK TRANSFER EXTRACTION:
+
+Input receipt shows:
+```
+Bank Transfer Complete
+Sent via GCash
+
+Bank                    MariBank
+Account No.             ******0594
+Account Name            CLYTHEM O.
+Receipt sent to         eduardbertillo2@gmail.com
+Transfer Date           Oct 29,2025 02:36 PM
+
+Transfer Amount         500.00
++Fee                    15.00
+
+Total                   ₱ 515.00
+
+InstaPay Invoice No.    5575967
+Ref No.                 5034124744068
+```
+
+Output JSON:
+```json
+{
+  "transaction_type": "bank_transfer",
+  "bank_name": "MariBank",
+  "account_number": "******0594",
+  "account_name": "CLYTHEM O.",
+  "receipt_email": "eduardbertillo2@gmail.com",
+  "amount": "500.00",
+  "bank_fee": "15.00",
+  "total_amount": "515.00",
+  "reference_number": "5034124744068",
+  "date": "2025-10-29",
+  "time": "02:36 PM",
+  "source": "GCash"
+}
+```
+
+⚠️ Notice: reference_number is from "Ref No.", NOT from "InstaPay Invoice No."!
+
+FOR MONEY TRANSFERS:
 1. NAME: Look EVERYWHERE - top, middle, in cards, after any label, near phone number
-2. Be FLEXIBLE with positioning - screenshots have different layouts than receipts
-3. Handle DIGITAL UI elements (buttons, cards, sections)
-4. Extract amounts even if they're in LARGE DISPLAY TEXT
-5. Phone numbers might be in "mobile" or "contact" or "number" fields
-6. REFERENCE NUMBERS - Look for ANY of these labels:
+2. Phone numbers might be in "mobile" or "contact" or "number" fields
+3. Be FLEXIBLE with positioning - screenshots have different layouts than receipts
+4. Handle DIGITAL UI elements (buttons, cards, sections)
+
+COMMON RULES (Both types):
+1. Extract amounts even if they're in LARGE DISPLAY TEXT
+2. REFERENCE NUMBERS - Look for ANY of these labels:
    - "Ref No.", "Ref. No.", "Ref No", "Ref:", "REF:"
    - "Reference Number", "Reference No.", "Reference:", "Reference"
    - "Transaction ID", "Transaction No.", "Trans ID", "Trans No"
@@ -453,8 +622,8 @@ CRITICAL EXTRACTION RULES:
    - "Trace No.", "Trace Number"
    - "TXN ID", "TXN No", "Transaction Reference"
    - Or ANY long number (10-20 digits) not related to amount/phone
-7. Dates might be: "Nov 14, 2025", "14/11/2025", "2025-11-14", "November 14, 2025", "just now", "today"
-8. For "just now" or "today" dates, use current date: 2025-11-14
+3. Dates might be: "Nov 14, 2025", "14/11/2025", "2025-11-14", "November 14, 2025", "just now", "today", "Oct 29,2025 02:36 PM"
+4. For "just now" or "today" dates, use current date: 2025-11-22
 
 SCREENSHOT-SPECIFIC:
 - UI elements: Look in header bars, cards, list items
@@ -613,7 +782,7 @@ IMPORTANT NOTES:
 EXTRACTION PRIORITY:
 
 FOR PAPER RECEIPTS:
-1. Read the recipient name (look for MA****N M. pattern)
+1. Read the recipient name (look for CL*****M M., MA****N M. pattern - 2 letters + asterisks + 1 letter + initial)
 2. Read the phone number (11 digits after name)
 3. Read the amount (look for "Amount" label)
 4. Read the fee (look for "Fee" label)
@@ -652,6 +821,29 @@ This two-step approach ensures you don't miss information because you were
 too focused on finding specific fields. You must SEE before you can FIND.
 
 ═══════════════════════════════════════════════════════════════
+⚠️ FINAL VALIDATION BEFORE RETURNING JSON
+═══════════════════════════════════════════════════════════════
+
+BANK TRANSFER CHECKLIST:
+□ Did I see "Bank Transfer Complete" in the title? → transaction_type: "bank_transfer"
+□ Did I extract the Bank name from "Bank" label?
+□ Did I extract the Account Number from "Account No." label?
+□ Did I extract the Account Name from "Account Name" label?
+□ Did I extract the email from "Receipt sent to" label?
+□ Did I get the Transfer Amount (NOT the Total)?
+□ Did I get the +Fee amount (this is the bank_fee)?
+□ Did I use "Ref No." value (NOT InstaPay Invoice No.)?
+□ Did I convert the date to YYYY-MM-DD format?
+
+MONEY TRANSFER CHECKLIST:
+□ Does it have a phone number with +63?
+□ Does it have a recipient name (possibly MA****N M. format)?
+□ No "Bank" or "Account No." fields present?
+□ transaction_type: "money_transfer"
+
+⚠️ CRITICAL: If you see "Bank Transfer Complete", you MUST use the bank_transfer format!
+
+═══════════════════════════════════════════════════════════════
 
 Return ONLY valid JSON format.
 ''';
@@ -688,26 +880,62 @@ Return ONLY valid JSON format.
         print('=== PARSED DATA ===');
         print(data);
 
-        // Validate that we got SOME useful data (more lenient validation)
-        final hasRecipient = data['recipient_name'] != null &&
-            data['recipient_name'] != 'Not found' &&
-            data['recipient_name']?.toString().isNotEmpty == true;
-        final hasPhone = data['phone_number'] != null &&
-            data['phone_number'] != 'Not found' &&
-            data['phone_number']?.toString().isNotEmpty == true;
-        final hasAmount = data['amount'] != null &&
-            data['amount'] != 'Not found' &&
-            data['amount']?.toString() != '0' &&
-            data['amount']?.toString() != '0.0' &&
-            data['amount']?.toString().isNotEmpty == true;
+        // Check transaction type
+        final transactionType =
+            data['transaction_type']?.toString() ?? 'money_transfer';
 
-        print('=== VALIDATION ===');
-        print('hasRecipient: $hasRecipient');
-        print('hasPhone: $hasPhone');
-        print('hasAmount: $hasAmount');
+        // Validate based on transaction type
+        bool isValid = false;
 
-        // Return data if we have at least ONE field (more lenient)
-        if (hasRecipient || hasPhone || hasAmount) {
+        if (transactionType == 'bank_transfer') {
+          // Bank transfer validation
+          final hasBankName = data['bank_name'] != null &&
+              data['bank_name'] != 'Not found' &&
+              data['bank_name']?.toString().isNotEmpty == true;
+          final hasAccountNumber = data['account_number'] != null &&
+              data['account_number'] != 'Not found' &&
+              data['account_number']?.toString().isNotEmpty == true;
+          final hasAccountName = data['account_name'] != null &&
+              data['account_name'] != 'Not found' &&
+              data['account_name']?.toString().isNotEmpty == true;
+          final hasAmount = data['amount'] != null &&
+              data['amount'] != 'Not found' &&
+              data['amount']?.toString() != '0' &&
+              data['amount']?.toString() != '0.0' &&
+              data['amount']?.toString().isNotEmpty == true;
+
+          print('=== BANK TRANSFER VALIDATION ===');
+          print('hasBankName: $hasBankName');
+          print('hasAccountNumber: $hasAccountNumber');
+          print('hasAccountName: $hasAccountName');
+          print('hasAmount: $hasAmount');
+
+          isValid =
+              hasBankName || hasAccountNumber || hasAccountName || hasAmount;
+        } else {
+          // Money transfer validation (original)
+          final hasRecipient = data['recipient_name'] != null &&
+              data['recipient_name'] != 'Not found' &&
+              data['recipient_name']?.toString().isNotEmpty == true;
+          final hasPhone = data['phone_number'] != null &&
+              data['phone_number'] != 'Not found' &&
+              data['phone_number']?.toString().isNotEmpty == true;
+          final hasAmount = data['amount'] != null &&
+              data['amount'] != 'Not found' &&
+              data['amount']?.toString() != '0' &&
+              data['amount']?.toString() != '0.0' &&
+              data['amount']?.toString().isNotEmpty == true;
+
+          print('=== MONEY TRANSFER VALIDATION ===');
+          print('hasRecipient: $hasRecipient');
+          print('hasPhone: $hasPhone');
+          print('hasAmount: $hasAmount');
+
+          isValid = hasRecipient || hasPhone || hasAmount;
+        }
+
+        // Return data if validation passes
+        if (isValid) {
           print('✓ Validation passed - returning data');
           return data;
         } else {
@@ -880,16 +1108,16 @@ This could be from:
 NAME FORMATS BY IMAGE TYPE:
 
 PAPER RECEIPT PHOTO:
-- Pattern: XX****X X. (letters + asterisks + letters + space + initial)
-- Example: "MA****N M." "JO****A D." "AN***A L."
-- The asterisks (*) are PRINTED on paper - they're real characters
+- Pattern: XX****X X. or XX*****X X. (2 letters + asterisks/dots + 1 letter + space + initial)
+- Example: "CL*****M M.", "MA****N M.", "JO****A D.", "AN***A L."
+- The asterisks (*) or dots (•) are PRINTED on paper - they're real characters
 - Usually after "To:" label
 - Text is SMALL but READABLE
 - Read character by character
 
 SCREEN PHOTO (camera photo of device):
 - Could show FULL NAME: "MARIA CLARA CRUZ" (if app displays full name)
-- Or MASKED: "MA****N M." (if app has privacy masking)
+- Or MASKED: "CL*****M M.", "MA****N M." (if app has privacy masking)
 - Name is on the SCREEN DISPLAY
 - May have screen glare over it - READ THROUGH the glare
 - Letters may look PIXELATED - shapes are still recognizable
@@ -898,7 +1126,7 @@ SCREEN PHOTO (camera photo of device):
 - Near avatar/profile icon
 
 PURE SCREENSHOT (digital):
-1. MASKED: "MA****N M.", "JO••••A D." (privacy setting)
+1. MASKED: "CL*****M M.", "MA****N M.", "JO••••A D." (privacy setting - GCash format)
 2. FULL NAME: "MARIA CLARA CRUZ", "JUAN DELA CRUZ" (most common)
 3. PARTIAL: "Maria C.", "Juan D."
 4. ABBREVIATED: "M. CRUZ", "J. SANTOS"
@@ -912,17 +1140,20 @@ FOR CAMERA PHOTOS (physical receipts):
    
 🔍 STEP 2: Read the text RIGHT AFTER "To:"
    - The name is on the SAME line or NEXT line after "To:"
-   - Pattern: XX****X X. (letters-asterisks-letters space initial)
+   - Pattern: XX****X X. or XX*****X X. (2 letters + asterisks/dots + 1 letter + space + initial)
+   - Examples: "CL*****M M.", "MA****N M.", "JO****A D."
    - This is usually the FIRST or SECOND line after service name
    
-� STEP 3: Verify it's a name pattern
-   - Must have asterisks (*) in the middle
-   - Must end with capital letter and dot (M. or D. or C.)
-   - Total length usually 8-12 characters
+� STEP 3: Verify it's a GCash name pattern
+   - Must START with exactly 2 capital letters
+   - Must have asterisks (*) or dots (•) in the middle
+   - Must have exactly 1 capital letter before the space
+   - Must end with space + capital letter + dot (" M." or " D." or " C.")
+   - Total length usually 10-14 characters
    
 � STEP 4: Read character by character
    - Don't guess - READ each character
-   - Count the asterisks (usually 4-6)
+   - Count the asterisks/dots (usually 4-7)
    - Include the space before the initial
    - Include the dot after the initial
 
@@ -965,21 +1196,24 @@ FOR SCREEN PHOTOS (Critical!):
 
 WHAT TO EXTRACT - CHARACTER BY CHARACTER:
 ✓ If PHOTO: Extract EXACTLY including every asterisk
-   Example input: "To: MA****N M."
-   Extract: "MA****N M."
+   Example input: "To: CL*****M M."
+   Extract: "CL*****M M."
    
 ✓ If SCREENSHOT: Extract the full name or masked name as shown
    Example input: "Send to: Maria Cruz"
    Extract: "Maria Cruz"
 
-✓ Keep the EXACT format:
-   - Every asterisk (*)
+✓ Keep the EXACT format for GCash masked names:
+   - Start with 2 capital letters (CL, MA, JO, etc.)
+   - Every asterisk (*) or dot (•) in the middle
+   - Exactly 1 capital letter before space
    - Every space
    - Every dot (.)
    - Exact capitalization
-   - The initial at the end
+   - The middle initial at the end (M., D., C., etc.)
 
 CORRECT EXAMPLES:
+✓ "CL*****M M." ← Two letters, 5 asterisks, letter, space, M dot (GCash format)
 ✓ "MA****N M." ← Two letters, 4 asterisks, letter, space, M dot
 ✓ "JO****A D." ← Two letters, 4 asterisks, letter, space, D dot
 ✓ "AN***A M." ← Two letters, 3 asterisks, letter, space, M dot
@@ -1012,7 +1246,7 @@ SPECIAL INSTRUCTIONS FOR DIFFICULT PHOTOS:
 
 PAPER RECEIPTS:
 1. If text is small: Zoom in mentally and read carefully
-2. If slightly blurry: The pattern XX****X X. is still recognizable
+2. If slightly blurry: The pattern XX****X X. or XX*****X X. (like CL*****M M.) is still recognizable
 3. If angled: Text is still readable even at an angle
 4. If shadowed: Focus on the white paper area where text is clearest
 5. If folded: Look at the visible flat sections
@@ -1043,11 +1277,12 @@ VERIFICATION CHECKLIST:
 Before returning the name, verify:
 
 FOR PAPER RECEIPTS:
+□ Does it START with 2 capital letters? (Must be YES for GCash)
 □ Does it have asterisks in the middle? (Must be YES)
-□ Does it end with capital letter + dot? (Must be YES)
-□ Is it 8-15 characters total? (Should be YES)
+□ Does it end with 1 capital letter + space + initial + dot? (Must be YES)
+□ Is it 10-15 characters total? (Should be YES)
 □ Did you read it character by character? (Must be YES)
-□ Does it match XX****X X. pattern? (YES for paper)
+□ Does it match XX****X X. or XX*****X X. pattern? (YES for GCash paper)
 
 FOR SCREEN PHOTOS:
 □ Did I look past the screen glare? (Must be YES)
@@ -1065,8 +1300,8 @@ The name IS in this image. You MUST find it.
 
 FOR PAPER RECEIPTS:
 - Look for "To:" label
-- Read the XX****X X. pattern after it
-- Read character by character
+- Read the XX****X X. or XX*****X X. pattern after it (like CL*****M M.)
+- Read character by character: 2 letters + asterisks/dots + 1 letter + space + initial
 
 FOR SCREEN PHOTOS (very common issue!):
 - Don't give up because of glare/moiré/pixels
@@ -1173,24 +1408,147 @@ IMPORTANT:
         }
       }
 
-      // Create and return ReceiptModel
-      return ReceiptModel(
-        recipientName: receiptData['recipientName'],
-        phoneNumber: receiptData['phoneNumber'],
-        amount: receiptData['amount'],
-        refNumber: receiptData['refNumber'],
-        date: DateTime.fromMillisecondsSinceEpoch(receiptData['date']),
-        fee: receiptData['fee'],
-        source: receiptData['source'],
-      );
+      // Create and return appropriate model based on transaction type
+      final transactionType =
+          receiptData['transactionType'] ?? 'money_transfer';
+
+      if (transactionType == 'bank_transfer') {
+        // For bank transfers, store as money transfer with special fields
+        // Use account name as recipient name for compatibility
+        return ReceiptModel(
+          recipientName: receiptData['accountName'] ?? 'Unknown',
+          phoneNumber: receiptData['receiptEmail'] ??
+              '', // Store email in phone field temporarily
+          amount: receiptData['amount'],
+          refNumber: receiptData['refNumber'],
+          date: DateTime.fromMillisecondsSinceEpoch(receiptData['date']),
+          fee: receiptData['bankFee'], // Use bankFee for fee field
+          source: receiptData['source'],
+          transactionType: 'bank_transfer',
+        );
+      } else {
+        // Regular money transfer
+        return ReceiptModel(
+          recipientName: receiptData['recipientName'],
+          phoneNumber: receiptData['phoneNumber'],
+          amount: receiptData['amount'],
+          refNumber: receiptData['refNumber'],
+          date: DateTime.fromMillisecondsSinceEpoch(receiptData['date']),
+          fee: receiptData['fee'],
+          source: receiptData['source'],
+          transactionType: 'money_transfer',
+        );
+      }
     } catch (e) {
       print('Error processing receipt with Gemini: $e');
       return null;
     }
   }
 
-  /// Convert Gemini response to ReceiptModel format
+  /// Convert Gemini response to ReceiptModel format (handles both money transfer and bank transfer)
   Map<String, dynamic>? convertToReceiptModel(
+    Map<String, dynamic> geminiResponse,
+    List<dynamic> feeRanges,
+  ) {
+    try {
+      final transactionType =
+          geminiResponse['transaction_type']?.toString() ?? 'money_transfer';
+
+      if (transactionType == 'bank_transfer') {
+        return _convertBankTransfer(geminiResponse, feeRanges);
+      } else {
+        return _convertMoneyTransfer(geminiResponse, feeRanges);
+      }
+    } catch (e) {
+      print('Error converting to ReceiptModel: $e');
+      return null;
+    }
+  }
+
+  /// Convert bank transfer response
+  Map<String, dynamic>? _convertBankTransfer(
+    Map<String, dynamic> geminiResponse,
+    List<dynamic> feeRanges,
+  ) {
+    try {
+      // Extract bank transfer specific values
+      final bankName = geminiResponse['bank_name']?.toString() ?? '';
+      final accountNumber = geminiResponse['account_number']?.toString() ?? '';
+      final accountName = geminiResponse['account_name']?.toString() ?? '';
+      final receiptEmail = geminiResponse['receipt_email']?.toString() ?? '';
+      final amountStr = geminiResponse['amount']?.toString() ?? '0';
+      final bankFeeStr = geminiResponse['bank_fee']?.toString() ?? '0';
+      final refNumber = geminiResponse['reference_number']?.toString() ?? '';
+      final dateStr = geminiResponse['date']?.toString() ?? '';
+      final timeStr = geminiResponse['time']?.toString() ?? '';
+      final source = geminiResponse['source']?.toString() ?? 'GCash';
+
+      // Parse amount
+      final amount = double.tryParse(
+              amountStr.replaceAll(',', '').replaceAll('₱', '').trim()) ??
+          0.0;
+
+      // Parse bank fee
+      double bankFee = double.tryParse(
+              bankFeeStr.replaceAll(',', '').replaceAll('₱', '').trim()) ??
+          0.0;
+
+      // Parse date
+      DateTime date = DateTime.now();
+      if (dateStr != 'Not found' && dateStr.isNotEmpty) {
+        date = _parseDate(dateStr, timeStr);
+      }
+
+      // Validate required fields for bank transfer
+      print('=== BANK TRANSFER FIELD VALIDATION ===');
+      print('Bank Name: "$bankName"');
+      print('Account Number: "$accountNumber"');
+      print('Account Name: "$accountName"');
+      print('Amount: $amount');
+
+      final hasValidBank =
+          bankName != 'Not found' && bankName.trim().isNotEmpty;
+      final hasValidAccount =
+          accountNumber != 'Not found' && accountNumber.trim().isNotEmpty;
+      final hasValidAccountName =
+          accountName != 'Not found' && accountName.trim().isNotEmpty;
+      final hasValidAmount = amount > 0.0;
+
+      print('hasValidBank: $hasValidBank');
+      print('hasValidAccount: $hasValidAccount');
+      print('hasValidAccountName: $hasValidAccountName');
+      print('hasValidAmount: $hasValidAmount');
+
+      // Require at least account name OR (bank + amount)
+      if (!hasValidAccountName && !(hasValidBank && hasValidAmount)) {
+        print(
+            '❌ Validation failed: Need at least account name OR (bank + amount)');
+        return null;
+      }
+
+      print('✅ Bank Transfer Validation passed');
+
+      return {
+        'transactionType': 'bank_transfer',
+        'bankName': hasValidBank ? bankName : 'Unknown',
+        'accountNumber': hasValidAccount ? accountNumber : '',
+        'accountName': hasValidAccountName ? accountName : 'Unknown',
+        'receiptEmail': receiptEmail == 'Not found' ? '' : receiptEmail,
+        'amount': amount,
+        'bankFee': bankFee,
+        'refNumber': refNumber == 'Not found' ? '' : refNumber,
+        'date': date.millisecondsSinceEpoch,
+        'source': source == 'Not found' ? 'GCash' : source,
+        'totalAmount': amount + bankFee,
+      };
+    } catch (e) {
+      print('Error converting bank transfer: $e');
+      return null;
+    }
+  }
+
+  /// Convert money transfer response
+  Map<String, dynamic>? _convertMoneyTransfer(
     Map<String, dynamic> geminiResponse,
     List<dynamic> feeRanges,
   ) {
@@ -1227,7 +1585,7 @@ IMPORTANT:
       }
 
       // Validate required fields - more lenient now
-      print('=== FIELD VALIDATION ===');
+      print('=== MONEY TRANSFER FIELD VALIDATION ===');
       print('Recipient Name: "$recipientName"');
       print('Phone Number: "$phoneNumber"');
       print('Amount: $amount');
@@ -1250,9 +1608,10 @@ IMPORTANT:
         return null;
       }
 
-      print('✅ Validation passed');
+      print('✅ Money Transfer Validation passed');
 
       return {
+        'transactionType': 'money_transfer',
         'recipientName': hasValidName ? recipientName : 'Unknown',
         'phoneNumber': hasValidPhone ? _normalizePhoneNumber(phoneNumber) : '',
         'amount': amount,
@@ -1263,7 +1622,33 @@ IMPORTANT:
         'totalAmount': amount + fee,
       };
     } catch (e) {
-      print('Error converting to ReceiptModel: $e');
+      print('Error converting money transfer: $e');
+      return null;
+    }
+  }
+
+  /// Process receipt and return complete data map (includes all bank transfer fields)
+  Future<Map<String, dynamic>?> processReceiptAsMap(
+    File imageFile,
+    List<dynamic> feeRanges,
+  ) async {
+    try {
+      // Read image bytes
+      final imageBytes = await imageFile.readAsBytes();
+
+      // Analyze with Gemini AI
+      final geminiResponse = await analyzeReceiptImage(imageBytes);
+
+      if (geminiResponse == null || geminiResponse.containsKey('error')) {
+        return null;
+      }
+
+      // Convert to receipt data format
+      var receiptData = convertToReceiptModel(geminiResponse, feeRanges);
+
+      return receiptData;
+    } catch (e) {
+      print('Error processing receipt as map: $e');
       return null;
     }
   }

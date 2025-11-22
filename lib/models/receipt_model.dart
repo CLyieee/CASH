@@ -6,6 +6,7 @@ class ReceiptModel {
   final DateTime date;
   final double fee;
   final String source; // e.g., "GCash", "Palawan", etc.
+  final String transactionType; // "money_transfer" or "bank_transfer"
 
   ReceiptModel({
     required this.recipientName,
@@ -15,6 +16,7 @@ class ReceiptModel {
     required this.date,
     required this.fee,
     this.source = 'GCash',
+    this.transactionType = 'money_transfer',
   });
 
   double get totalAmount => amount + fee;
@@ -29,6 +31,7 @@ class ReceiptModel {
       'fee': fee,
       'source': source,
       'totalAmount': totalAmount,
+      'transactionType': transactionType,
     };
   }
 
@@ -41,6 +44,7 @@ class ReceiptModel {
       date: DateTime.fromMillisecondsSinceEpoch(map['date'] ?? 0),
       fee: (map['fee'] ?? 0).toDouble(),
       source: map['source'] ?? 'GCash',
+      transactionType: map['transactionType'] ?? 'money_transfer',
     );
   }
 
@@ -52,6 +56,7 @@ class ReceiptModel {
     DateTime? date,
     double? fee,
     String? source,
+    String? transactionType,
   }) {
     return ReceiptModel(
       recipientName: recipientName ?? this.recipientName,
@@ -61,6 +66,7 @@ class ReceiptModel {
       date: date ?? this.date,
       fee: fee ?? this.fee,
       source: source ?? this.source,
+      transactionType: transactionType ?? this.transactionType,
     );
   }
 }

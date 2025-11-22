@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/biometric_auth_service.dart';
 import '../utils/app_text.dart';
 import '../controllers/app_controller.dart';
 import 'login_selection_page.dart';
+import 'fee_settings_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -329,6 +330,95 @@ class _SettingsPageState extends State<SettingsPage> {
                               const Color(0xFF2C3E50).withOpacity(0.3),
                         ),
                       ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Preferences Section
+                  Text(
+                    'Preferences',
+                    style: AppText.poppins(
+                      color: const Color(0xFF2C3E50),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Fee Settings Button
+                  GestureDetector(
+                    onTap: () => Get.to(() => const FeeSettingsPage()),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0E5EC),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.8),
+                            offset: const Offset(-6, -6),
+                            blurRadius: 12,
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            offset: const Offset(6, 6),
+                            blurRadius: 12,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF64B5F6),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      const Color(0xFF64B5F6).withOpacity(0.4),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.attach_money,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Fee Settings',
+                                  style: AppText.poppins(
+                                    color: const Color(0xFF2C3E50),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Configure transaction fee ranges',
+                                  style: AppText.poppins(
+                                    color: const Color(0xFF64B5F6),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: Color(0xFF2C3E50),
+                            size: 24,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
 

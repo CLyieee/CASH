@@ -77,6 +77,7 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
     super.initState();
 
     // Initialize text controllers with receipt data
+    // For bank transfers: recipientName = Account Name, phoneNumber = Bank Name
     nameController = TextEditingController(text: widget.receipt.recipientName);
     phoneController = TextEditingController(text: widget.receipt.phoneNumber);
     amountController =
@@ -193,43 +194,12 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
 
                 const SizedBox(height: 20),
 
-                // Extracted Data (Editable)
+                // Extracted Data (Editable) - Different fields based on transaction type
                 _buildDataCard(
                   title: 'Extracted Information (Editable)',
-                  children: [
-                    _buildEditableField(
-                        'Recipient', nameController, Icons.person),
-                    _buildDivider(),
-                    _buildEditableField(
-                        'Phone Number', phoneController, Icons.phone,
-                        keyboardType: TextInputType.phone),
-                    _buildDivider(),
-                    _buildEditableField(
-                        'Amount', amountController, Icons.attach_money,
-                        keyboardType: TextInputType.number, prefix: '₱'),
-                    _buildDivider(),
-                    _buildEditableField(
-                        'Fee', feeController, Icons.receipt_long,
-                        keyboardType: TextInputType.number, prefix: '₱'),
-                    _buildDivider(),
-                    _buildInfoRow(
-                      'Total',
-                      currencyFormat.format(_calculateTotal()),
-                      Icons.payments,
-                      isHighlighted: true,
-                    ),
-                    _buildDivider(),
-                    _buildEditableField(
-                        'Ref Number', refNumberController, Icons.tag),
-                    _buildDivider(),
-                    _buildInfoRow(
-                      'Date',
-                      dateFormat.format(widget.receipt.date),
-                      Icons.calendar_today,
-                    ),
-                    _buildDivider(),
-                    _buildSourceDropdown(),
-                  ],
+                  children: widget.receipt.transactionType == 'bank_transfer'
+                      ? _buildBankTransferFields(currencyFormat, dateFormat)
+                      : _buildMoneyTransferFields(currencyFormat, dateFormat),
                 )
                     .animate()
                     .fadeIn(delay: 200.ms, duration: 400.ms)
@@ -541,6 +511,74 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
         ],
       ),
     );
+  }
+
+  // Build fields for bank transfer
+  List<Widget> _buildBankTransferFields(
+      NumberFormat currencyFormat, DateFormat dateFormat) {
+    return [
+      _buildEditableField('Bank', phoneController, Icons.account_balance),
+      _buildDivider(),
+      _buildEditableField('Account Name', nameController, Icons.person_outline),
+      _buildDivider(),
+      _buildEditableField(
+          'Transfer Amount', amountController, Icons.attach_money,
+          keyboardType: TextInputType.number, prefix: '₱'),
+      _buildDivider(),
+      _buildEditableField('Bank Fee (+Fee)', feeController, Icons.receipt_long,
+          keyboardType: TextInputType.number, prefix: '₱'),
+      _buildDivider(),
+      _buildInfoRow(
+        'Total',
+        currencyFormat.format(_calculateTotal()),
+        Icons.payments,
+        isHighlighted: true,
+      ),
+      _buildDivider(),
+      _buildEditableField('Ref No.', refNumberController, Icons.tag),
+      _buildDivider(),
+      _buildInfoRow(
+        'Transfer Date',
+        dateFormat.format(widget.receipt.date),
+        Icons.calendar_today,
+      ),
+      _buildDivider(),
+      _buildSourceDropdown(),
+    ];
+  }
+
+  // Build fields for money transfer
+  List<Widget> _buildMoneyTransferFields(
+      NumberFormat currencyFormat, DateFormat dateFormat) {
+    return [
+      _buildEditableField('Recipient', nameController, Icons.person),
+      _buildDivider(),
+      _buildEditableField('Phone Number', phoneController, Icons.phone,
+          keyboardType: TextInputType.phone),
+      _buildDivider(),
+      _buildEditableField('Amount', amountController, Icons.attach_money,
+          keyboardType: TextInputType.number, prefix: '₱'),
+      _buildDivider(),
+      _buildEditableField('Fee', feeController, Icons.receipt_long,
+          keyboardType: TextInputType.number, prefix: '₱'),
+      _buildDivider(),
+      _buildInfoRow(
+        'Total',
+        currencyFormat.format(_calculateTotal()),
+        Icons.payments,
+        isHighlighted: true,
+      ),
+      _buildDivider(),
+      _buildEditableField('Ref Number', refNumberController, Icons.tag),
+      _buildDivider(),
+      _buildInfoRow(
+        'Date',
+        dateFormat.format(widget.receipt.date),
+        Icons.calendar_today,
+      ),
+      _buildDivider(),
+      _buildSourceDropdown(),
+    ];
   }
 
   Widget _buildInfoRow(
