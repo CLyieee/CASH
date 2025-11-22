@@ -19,6 +19,7 @@ class _SettingsPageState extends State<SettingsPage> {
   static const String _biometricPrefKey = 'biometric_enabled';
   final BiometricAuthService _biometricService = BiometricAuthService();
   final AppController controller = Get.find<AppController>();
+  final ThemeController themeController = Get.find<ThemeController>();
   bool _isBiometricAvailable = false;
   bool _isBiometricEnabled = false;
   bool _isLoading = true;
@@ -229,6 +230,8 @@ class _SettingsPageState extends State<SettingsPage> {
                             const SizedBox(height: 24),
                             _buildSecurityCard(palette),
                             const SizedBox(height: 24),
+                            _buildFeeSettings(palette),
+                            const SizedBox(height: 24),
                             _buildSupportCard(palette),
                             const SizedBox(height: 24),
                             _buildDangerZone(palette),
@@ -375,103 +378,57 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-                  // Preferences Section
-                  Text(
-                    'Preferences',
-                    style: AppText.poppins(
-                      color: const Color(0xFF2C3E50),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+  Widget _buildFeeSettings(_SettingsPalette palette) {
+    return _SettingsCard(
+      title: 'Transaction fees',
+      subtitle: 'Configure your fee ranges',
+      palette: palette,
+      child: _SupportTile(
+        icon: Icons.attach_money_rounded,
+        title: 'Fee settings',
+        subtitle: 'Manage transaction fee ranges',
+        palette: palette,
+        onTap: () => Get.to(() => const FeeSettingsPage()),
+      ),
+    );
+  }
 
-                  // Fee Settings Button
-                  GestureDetector(
-                    onTap: () => Get.to(() => const FeeSettingsPage()),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0E5EC),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.8),
-                            offset: const Offset(-6, -6),
-                            blurRadius: 12,
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            offset: const Offset(6, 6),
-                            blurRadius: 12,
-                          ),
-                        ],
+  Widget _buildSecurityCard(_SettingsPalette palette) {
+    return _SettingsCard(
+      title: 'Security',
+      subtitle: 'Keep your account secure',
+      palette: palette,
+      child: Column(
+        children: [
+          // Biometric toggle
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: palette.textMuted.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.fingerprint_rounded,
+                  color: palette.textPrimary,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Biometric login',
+                      style: AppText.poppins(
+                        color: palette.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF64B5F6),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                      const Color(0xFF64B5F6).withOpacity(0.4),
-                                  blurRadius: 8,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.attach_money,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Fee Settings',
-                                  style: AppText.poppins(
-                                    color: const Color(0xFF2C3E50),
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Configure transaction fee ranges',
-                                  style: AppText.poppins(
-                                    color: const Color(0xFF64B5F6),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.chevron_right,
-                            color: Color(0xFF2C3E50),
-                            size: 24,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Account Section
-                  Text(
-                    'Account',
-                    style: AppText.poppins(
-                      color: const Color(0xFF2C3E50),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-
                     ),
                     const SizedBox(height: 4),
                     Text(
