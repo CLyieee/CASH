@@ -1,11 +1,17 @@
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class BiometricAuthService {
   final LocalAuthentication _localAuth = LocalAuthentication();
 
   /// Check if biometric authentication is available on the device
   Future<bool> isBiometricAvailable() async {
+    // Biometric authentication is not supported on web
+    if (kIsWeb) {
+      return false;
+    }
+
     try {
       final bool canAuthenticateWithBiometrics =
           await _localAuth.canCheckBiometrics;
@@ -20,6 +26,11 @@ class BiometricAuthService {
 
   /// Get list of available biometric types
   Future<List<BiometricType>> getAvailableBiometrics() async {
+    // Biometric authentication is not supported on web
+    if (kIsWeb) {
+      return <BiometricType>[];
+    }
+
     try {
       return await _localAuth.getAvailableBiometrics();
     } on PlatformException catch (e) {

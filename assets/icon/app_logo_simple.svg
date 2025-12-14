@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simple, Clean Logo for App Icon -->
+  
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="#4CAF50"/>
+  
+  <!-- Inner Circle -->
+  <circle cx="256" cy="256" r="200" fill="#FFFFFF"/>
+  
+  <!-- Money Symbol -->
+  <text x="256" y="320" font-family="Arial, sans-serif" font-size="180" font-weight="bold" fill="#4CAF50" text-anchor="middle">₱</text>
+  
+  <!-- Scan Indicator (Small corner) -->
+  <g transform="translate(380, 140)">
+    <rect x="0" y="0" width="40" height="40" rx="8" fill="#FFC107"/>
+    <path d="M 8 8 L 20 8 L 20 20 L 8 20 Z" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="14" cy="14" r="2" fill="#FFFFFF"/>
+  </g>
+</svg>
+
+

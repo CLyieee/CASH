@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG to PNG Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #4CAF50;
+        }
+        .preview {
+            margin: 20px 0;
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            max-width: 100%;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        select {
+            padding: 8px;
+            font-size: 14px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 SVG to PNG Converter</h1>
+        <p>Convert your app logo SVG files to PNG format for use as app icons.</p>
+        
+        <div class="info">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Select an SVG file below</li>
+                <li>Choose the output size (1024x1024 recommended for app icons)</li>
+                <li>Click "Convert to PNG"</li>
+                <li>Right-click the preview and "Save Image As..."</li>
+            </ol>
+        </div>
+
+        <div>
+            <label for="svgSelect"><strong>Select SVG File:</strong></label><br>
+            <select id="svgSelect" onchange="loadSVG()">
+                <option value="">Choose a file...</option>
+                <option value="app_logo_simple.svg">Simple Logo (Recommended)</option>
+                <option value="app_logo_modern.svg">Modern Logo</option>
+                <option value="logo.svg">Detailed Logo</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="sizeSelect"><strong>Output Size:</strong></label><br>
+            <select id="sizeSelect">
+                <option value="1024">1024x1024 (App Store/Play Store)</option>
+                <option value="512">512x512 (High-res icon)</option>
+                <option value="256">256x256 (Standard icon)</option>
+                <option value="192">192x192 (Android adaptive)</option>
+                <option value="180">180x180 (iOS icon)</option>
+            </select>
+        </div>
+
+        <div class="preview">
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div style="text-align: center;">
+            <button onclick="convertToPNG()">🔄 Convert to PNG</button>
+            <button onclick="downloadPNG()">💾 Download PNG</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSVG = '';
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+
+        async function loadSVG() {
+            const select = document.getElementById('svgSelect');
+            const filename = select.value;
+            if (!filename) return;
+
+            try {
+                const response = await fetch(filename);
+                const svgText = await response.text();
+                currentSVG = svgText;
+                renderSVG();
+            } catch (error) {
+                alert('Error loading SVG file. Make sure you opened this HTML file from the assets/icon folder.');
+                console.error(error);
+            }
+        }
+
+        function renderSVG() {
+            const size = parseInt(document.getElementById('sizeSelect').value);
+            canvas.width = size;
+            canvas.height = size;
+
+            const img = new Image();
+            const svgBlob = new Blob([currentSVG], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(svgBlob);
+
+            img.onload = function() {
+                ctx.clearRect(0, 0, size, size);
+                ctx.drawImage(img, 0, 0, size, size);
+                URL.revokeObjectURL(url);
+            };
+
+            img.src = url;
+        }
+
+        function convertToPNG() {
+            if (!currentSVG) {
+                alert('Please select an SVG file first!');
+                return;
+            }
+            renderSVG();
+            alert('Conversion complete! Click "Download PNG" to save the file.');
+        }
+
+        function downloadPNG() {
+            if (!currentSVG) {
+                alert('Please select and convert an SVG file first!');
+                return;
+            }
+
+            const size = parseInt(document.getElementById('sizeSelect').value);
+            const select = document.getElementById('svgSelect');
+            const filename = select.options[select.selectedIndex].text.replace(' (Recommended)', '').replace(' ', '_').toLowerCase();
+            
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${filename}_${size}x${size}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        }
+
+        // Auto-render when size changes
+        document.getElementById('sizeSelect').addEventListener('change', function() {
+            if (currentSVG) {
+                renderSVG();
+            }
+        });
+    </script>
+</body>
+</html>
+
+

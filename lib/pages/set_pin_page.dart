@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:g/utils/app_text.dart';
+import 'package:g/utils/responsive_helper.dart';
 import '../controllers/app_controller.dart';
 import 'setup_page.dart';
 
@@ -15,6 +16,8 @@ class SetPinPage extends StatefulWidget {
 class _SetPinPageState extends State<SetPinPage> {
   final AppController controller = Get.find<AppController>();
   String _pin = '';
+  String _firstPin = '';
+  bool _isConfirmingPin = false;
   final int _pinLength = 4;
 
   void _onNumberPressed(String number) {
@@ -24,16 +27,40 @@ class _SetPinPageState extends State<SetPinPage> {
       });
 
       if (_pin.length == _pinLength) {
-        // Save PIN to controller (will sync to Firestore)
-        controller.setPin(_pin);
+        if (!_isConfirmingPin) {
+          // First PIN entered, move to confirmation
+          Future.delayed(const Duration(milliseconds: 300), () {
+            setState(() {
+              _firstPin = _pin;
+              _pin = '';
+              _isConfirmingPin = true;
+            });
+          });
+        } else {
+          // Confirming PIN
+          if (_pin == _firstPin) {
+            // PINs match, save and proceed
+            controller.setPin(_pin);
 
-        Future.delayed(const Duration(milliseconds: 300), () {
-          Get.off(
-            () => const SetupPage(),
-            transition: Transition.fadeIn,
-            duration: const Duration(milliseconds: 400),
-          );
-        });
+            Future.delayed(const Duration(milliseconds: 300), () {
+              Get.off(
+                () => const SetupPage(),
+                transition: Transition.fadeIn,
+                duration: const Duration(milliseconds: 400),
+              );
+            });
+          } else {
+            // PINs don't match, show error and reset
+            Future.delayed(const Duration(milliseconds: 300), () {
+              _showPinMismatchError();
+              setState(() {
+                _pin = '';
+                _firstPin = '';
+                _isConfirmingPin = false;
+              });
+            });
+          }
+        }
       }
     }
   }
@@ -46,33 +73,46 @@ class _SetPinPageState extends State<SetPinPage> {
     }
   }
 
-  Widget _buildNumberButton(String number) {
+  void _showPinMismatchError() {
+    Get.snackbar(
+      'PIN Mismatch',
+      'PINs do not match. Please try again.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.redAccent,
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 16,
+      duration: const Duration(seconds: 3),
+      icon: const Icon(Icons.error_outline, color: Colors.white),
+    );
+  }
+
+  Widget _buildNumberButton(
+      String number, bool isSmallScreen, BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final buttonSize = isSmallScreen ? 60.0 : 70.0;
+    final cardSurface = isDark ? const Color(0xFF1A2332) : Colors.white;
+    final cardBorder = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.06);
+    final textPrimary = theme.colorScheme.onSurface;
+
     return GestureDetector(
       onTap: () => _onNumberPressed(number),
       child: Container(
-        width: 70,
-        height: 70,
+        width: buttonSize,
+        height: buttonSize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color(0xFFE0E5EC),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.white.withOpacity(0.8),
-              offset: const Offset(-4, -4),
-              blurRadius: 10,
-            ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              offset: const Offset(4, 4),
-              blurRadius: 10,
-            ),
-          ],
+          color: cardSurface,
+          border: Border.all(color: cardBorder),
         ),
         child: Center(
           child: Text(
             number,
             style: AppText.poppins(
-              color: const Color(0xFF2C3E50),
+              color: textPrimary,
               fontSize: 28,
               fontWeight: FontWeight.w600,
             ),
@@ -82,32 +122,31 @@ class _SetPinPageState extends State<SetPinPage> {
     );
   }
 
-  Widget _buildDeleteButton() {
+  Widget _buildDeleteButton(bool isSmallScreen, BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final buttonSize = isSmallScreen ? 60.0 : 70.0;
+    final cardSurface = isDark ? const Color(0xFF1A2332) : Colors.white;
+    final cardBorder = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.06);
+    final accentBlue =
+        isDark ? const Color(0xFF5BA3E8) : const Color(0xFF64B5F6);
+
     return GestureDetector(
       onTap: _onDeletePressed,
       child: Container(
-        width: 70,
-        height: 70,
+        width: buttonSize,
+        height: buttonSize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color(0xFFE0E5EC),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.white.withOpacity(0.8),
-              offset: const Offset(-4, -4),
-              blurRadius: 10,
-            ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              offset: const Offset(4, 4),
-              blurRadius: 10,
-            ),
-          ],
+          color: cardSurface,
+          border: Border.all(color: cardBorder),
         ),
-        child: const Center(
+        child: Center(
           child: Icon(
             Icons.backspace_outlined,
-            color: Color(0xFF64B5F6),
+            color: accentBlue,
             size: 28,
           ),
         ),
@@ -117,210 +156,203 @@ class _SetPinPageState extends State<SetPinPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFE0E5EC),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0E5EC),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.white.withOpacity(0.8),
-                  offset: const Offset(-4, -4),
-                  blurRadius: 8,
-                ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  offset: const Offset(4, 4),
-                  blurRadius: 8,
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.arrow_back_rounded,
-              color: Color(0xFF2C3E50),
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final backgroundColor = theme.scaffoldBackgroundColor;
+    final textPrimary = theme.colorScheme.onSurface;
+    final accentBlue =
+        isDark ? const Color(0xFF5BA3E8) : const Color(0xFF64B5F6);
+
+    return WillPopScope(
+      onWillPop: () async => false, // Prevent back navigation
+      child: Scaffold(
+        backgroundColor: backgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          automaticallyImplyLeading: false, // Remove back button
+          title: Text(
+            'Create PIN',
+            style: AppText.poppins(
+              color: textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          onPressed: () => Get.back(),
+          centerTitle: true,
         ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 5),
-              Text(
-                'Create PIN',
-                style: AppText.poppins(
-                  color: const Color(0xFF2C3E50),
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  shadows: [
-                    Shadow(
-                      color: Colors.white.withOpacity(0.8),
-                      offset: const Offset(-2, -2),
-                      blurRadius: 4,
-                    ),
-                    Shadow(
-                      color: Colors.black.withOpacity(0.2),
-                      offset: const Offset(2, 2),
-                      blurRadius: 4,
-                    ),
-                  ],
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isSmallScreen = ResponsiveHelper.isSmallScreen(context);
+              final horizontalPadding =
+                  ResponsiveHelper.horizontalPadding(context);
+
+              return SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: isSmallScreen ? 8.0 : 10.0,
                 ),
-              ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.3, end: 0),
-              const Spacer(),
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE0E5EC),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.white.withOpacity(0.8),
-                      offset: const Offset(-6, -6),
-                      blurRadius: 12,
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      offset: const Offset(6, 6),
-                      blurRadius: 12,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Container(
-                    width: 55,
-                    height: 55,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF64B5F6),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF64B5F6).withOpacity(0.5),
-                          blurRadius: 20,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.pin_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - 20,
                   ),
-                ),
-              ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
-              const SizedBox(height: 24),
-              Text(
-                'Set up your 4-digit PIN',
-                style: AppText.poppins(
-                  color: const Color(0xFF64B5F6),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_pinLength, (index) {
-                  return Container(
-                    width: 50,
-                    height: 50,
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE0E5EC),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: index < _pin.length
-                          ? [
+                  child: IntrinsicHeight(
+                    child: Column(
+                      children: [
+                        SizedBox(height: isSmallScreen ? 2 : 5),
+                        Text(
+                          _isConfirmingPin ? 'Confirm PIN' : 'Create PIN',
+                          style: AppText.poppins(
+                            color: textPrimary,
+                            fontSize: isSmallScreen ? 24 : 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                            .animate()
+                            .fadeIn(duration: 400.ms)
+                            .slideY(begin: -0.3, end: 0),
+                        const Spacer(),
+                        Container(
+                          width: isSmallScreen ? 70 : 80,
+                          height: isSmallScreen ? 70 : 80,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: isDark
+                                  ? [
+                                      const Color(0xFF5BA3E8),
+                                      const Color(0xFF4A8FD4)
+                                    ]
+                                  : [
+                                      const Color(0xFF64B5F6),
+                                      const Color(0xFF42A5F5)
+                                    ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                offset: const Offset(4, 4),
-                                blurRadius: 8,
-                              ),
-                              BoxShadow(
-                                color: Colors.white.withOpacity(0.7),
-                                offset: const Offset(-4, -4),
-                                blurRadius: 8,
-                              ),
-                            ]
-                          : [
-                              BoxShadow(
-                                color: Colors.white.withOpacity(0.8),
-                                offset: const Offset(-4, -4),
-                                blurRadius: 8,
-                              ),
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                offset: const Offset(4, 4),
-                                blurRadius: 8,
+                                color: accentBlue.withOpacity(0.4),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
                               ),
                             ],
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: index < _pin.length
-                              ? const Color(0xFF64B5F6)
-                              : Colors.transparent,
-                          shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.pin_rounded,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                        )
+                            .animate()
+                            .scale(duration: 600.ms, curve: Curves.easeOutBack),
+                        const SizedBox(height: 24),
+                        Text(
+                          _isConfirmingPin
+                              ? 'Re-enter your PIN to confirm'
+                              : 'Set up your 4-digit PIN',
+                          style: AppText.poppins(
+                            color: accentBlue,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                      ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(_pinLength, (index) {
+                            final dotSize = isSmallScreen ? 44.0 : 50.0;
+                            final cardSurface =
+                                isDark ? const Color(0xFF1A2332) : Colors.white;
+                            final cardBorder = isDark
+                                ? Colors.white.withOpacity(0.08)
+                                : Colors.black.withOpacity(0.06);
+
+                            return Container(
+                              width: dotSize,
+                              height: dotSize,
+                              margin: EdgeInsets.symmetric(
+                                horizontal: isSmallScreen ? 6 : 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: cardSurface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: index < _pin.length
+                                      ? accentBlue
+                                      : cardBorder,
+                                  width: index < _pin.length ? 2 : 1,
+                                ),
+                              ),
+                              child: Center(
+                                child: Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: index < _pin.length
+                                        ? accentBlue
+                                        : Colors.transparent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                        const Spacer(),
+                        Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildNumberButton('1', isSmallScreen, context),
+                                _buildNumberButton('2', isSmallScreen, context),
+                                _buildNumberButton('3', isSmallScreen, context),
+                              ],
+                            ),
+                            SizedBox(height: isSmallScreen ? 12 : 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildNumberButton('4', isSmallScreen, context),
+                                _buildNumberButton('5', isSmallScreen, context),
+                                _buildNumberButton('6', isSmallScreen, context),
+                              ],
+                            ),
+                            SizedBox(height: isSmallScreen ? 12 : 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildNumberButton('7', isSmallScreen, context),
+                                _buildNumberButton('8', isSmallScreen, context),
+                                _buildNumberButton('9', isSmallScreen, context),
+                              ],
+                            ),
+                            SizedBox(height: isSmallScreen ? 12 : 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                SizedBox(
+                                  width: isSmallScreen ? 60 : 70,
+                                  height: isSmallScreen ? 60 : 70,
+                                ),
+                                _buildNumberButton('0', isSmallScreen, context),
+                                _buildDeleteButton(isSmallScreen, context),
+                              ],
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: isSmallScreen ? 12 : 20),
+                      ],
                     ),
-                  );
-                }),
-              ),
-              const Spacer(),
-              Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildNumberButton('1'),
-                      _buildNumberButton('2'),
-                      _buildNumberButton('3'),
-                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildNumberButton('4'),
-                      _buildNumberButton('5'),
-                      _buildNumberButton('6'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildNumberButton('7'),
-                      _buildNumberButton('8'),
-                      _buildNumberButton('9'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      const SizedBox(width: 70, height: 70),
-                      _buildNumberButton('0'),
-                      _buildDeleteButton(),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-            ],
+                ),
+              );
+            },
           ),
         ),
       ),

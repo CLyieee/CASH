@@ -11,6 +11,7 @@ class TransactionModel {
   final String source;
   final String transactionType; // 'Cash In' or 'Cash Out'
   final DateTime createdAt;
+  final double separateFee; // Fee paid separately (not included in amount)
 
   TransactionModel({
     required this.id,
@@ -25,6 +26,7 @@ class TransactionModel {
     required this.source,
     required this.transactionType,
     required this.createdAt,
+    this.separateFee = 0.0,
   });
 
   Map<String, dynamic> toMap() {
@@ -41,6 +43,7 @@ class TransactionModel {
       'source': source,
       'transactionType': transactionType,
       'createdAt': createdAt.millisecondsSinceEpoch,
+      'separateFee': separateFee,
     };
   }
 
@@ -58,6 +61,7 @@ class TransactionModel {
       source: map['source'] ?? '',
       transactionType: map['transactionType'] ?? 'Cash In',
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? 0),
+      separateFee: (map['separateFee'] ?? 0).toDouble(),
     );
   }
 
@@ -74,6 +78,7 @@ class TransactionModel {
     String? source,
     String? transactionType,
     DateTime? createdAt,
+    double? separateFee,
   }) {
     return TransactionModel(
       id: id ?? this.id,
@@ -88,6 +93,7 @@ class TransactionModel {
       source: source ?? this.source,
       transactionType: transactionType ?? this.transactionType,
       createdAt: createdAt ?? this.createdAt,
+      separateFee: separateFee ?? this.separateFee,
     );
   }
 }

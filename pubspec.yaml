@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 3.0.0+1
 
 environment:
   sdk: ^3.5.3
@@ -67,6 +67,17 @@ dependencies:
   # Report Export
   path_provider: ^2.1.0
   share_plus: ^7.2.0
+  file_picker: ^8.1.6
+  
+  # Voice Chat
+  speech_to_text: ^6.6.0
+  flutter_tts: ^4.0.2
+  permission_handler: ^11.3.0
+  
+  # App Update
+  http: ^1.1.0
+  package_info_plus: ^8.0.0
+  open_filex: ^4.3.2
 
 dependency_overrides:
 
@@ -80,6 +91,9 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^4.0.0
+  
+  # App Icon Generator
+  flutter_launcher_icons: ^0.13.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -95,6 +109,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/animations/
+    - assets/icon/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -121,3 +136,14 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# App Icon Configuration
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#4CAF50"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  adaptive_icon_padding: 20
+  remove_alpha_ios: true

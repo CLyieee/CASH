@@ -5,7 +5,9 @@ import 'firestore_service.dart';
 
 class GoogleSignInService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email'],
+  );
   final FirestoreService _firestoreService = FirestoreService();
 
   // Get current user
@@ -14,10 +16,16 @@ class GoogleSignInService {
   // Stream of auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Sign in with Google
-  Future<UserCredential?> signInWithGoogle() async {
+  // Sign in with Google - shows account picker for multiple accounts
+  Future<UserCredential?> signInWithGoogle(
+      {bool forceAccountPicker = true}) async {
     try {
-      // Trigger the authentication flow
+      // Sign out first to force account picker if requested
+      if (forceAccountPicker) {
+        await _googleSignIn.signOut();
+      }
+
+      // Trigger the authentication flow - this will show account picker
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {

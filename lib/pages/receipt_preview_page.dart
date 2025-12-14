@@ -30,13 +30,6 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
   late String selectedSource;
   bool isSaving = false;
 
-  // Text editing controllers for editable fields
-  late TextEditingController nameController;
-  late TextEditingController phoneController;
-  late TextEditingController amountController;
-  late TextEditingController feeController;
-  late TextEditingController refNumberController;
-
   // Available transaction type options
   final List<String> transactionTypeOptions = [
     'Cash In',
@@ -45,97 +38,87 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
     'Bank Transfer',
   ];
 
-  // Available source options
+  // Available source options - Only GCash supported
   final List<String> sourceOptions = [
     'GCash',
-    'Maya',
-    'PayMaya',
-    'Palawan Express',
-    'MLhuillier',
-    'Cebuana Lhuillier',
-    'Western Union',
-    'LBC',
-    'Bank Transfer',
-    'Load/E-Load',
-    'Coins.ph',
-    'GoTyme',
-    'Seabank',
-    'BPI',
-    'BDO',
-    'Metrobank',
-    'UnionBank',
-    'PNB',
-    'Landbank',
-    'RCBC',
-    'Security Bank',
-    'Chinabank',
-    'Other',
   ];
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize text controllers with receipt data
-    // For bank transfers: recipientName = Account Name, phoneNumber = Bank Name
-    nameController = TextEditingController(text: widget.receipt.recipientName);
-    phoneController = TextEditingController(text: widget.receipt.phoneNumber);
-    amountController =
-        TextEditingController(text: widget.receipt.amount.toString());
-    feeController = TextEditingController(text: widget.receipt.fee.toString());
-    refNumberController = TextEditingController(text: widget.receipt.refNumber);
-
     // Initialize with receipt source or default to 'GCash'
     selectedSource =
         widget.receipt.source.isNotEmpty ? widget.receipt.source : 'GCash';
-    // Ensure selected source exists in options
-    if (!sourceOptions.contains(selectedSource)) {
-      selectedSource = 'Other';
+
+    // Auto-detect load transactions and set type to 'Load'
+    if (selectedSource == 'Load' || _isLoadTransaction()) {
+      selectedTransactionType = 'Load';
+      selectedSource = 'Load';
+    } else {
+      // Ensure selected source exists in options
+      if (!sourceOptions.contains(selectedSource)) {
+        selectedSource = 'GCash';
+      }
     }
   }
 
-  @override
-  void dispose() {
-    nameController.dispose();
-    phoneController.dispose();
-    amountController.dispose();
-    feeController.dispose();
-    refNumberController.dispose();
-    super.dispose();
+  // Check if this is a load transaction based on receipt data
+  bool _isLoadTransaction() {
+    final refNumber = widget.receipt.refNumber;
+    final recipientName = widget.receipt.recipientName.toLowerCase();
+
+    // Check if reference number is exactly 9 digits
+    final nineDigitPattern = RegExp(r'^\d{9}$');
+    final hasNineDigits =
+        nineDigitPattern.hasMatch(refNumber.replaceAll(RegExp(r'\s'), ''));
+
+    // Check for load keywords
+    final loadKeywords = [
+      'load',
+      'autoload',
+      'easysurf',
+      'surf',
+      'unli',
+      'giga',
+      'allnet',
+      'smart',
+      'globe',
+      'tnt'
+    ];
+    final hasLoadKeyword =
+        loadKeywords.any((keyword) => recipientName.contains(keyword));
+
+    return hasNineDigits || (selectedSource == 'Load') || hasLoadKeyword;
   }
+
+  bool get isLoadTransaction => selectedTransactionType == 'Load';
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final currencyFormat = NumberFormat.currency(symbol: '₱', decimalDigits: 2);
     final dateFormat = DateFormat('MMM dd, yyyy hh:mm a');
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE0E5EC),
+      backgroundColor:
+          isDark ? const Color(0xFF0D1117) : const Color(0xFFF5F7FA),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFE0E5EC),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.white.withOpacity(0.8),
-                  offset: const Offset(-4, -4),
-                  blurRadius: 8,
-                ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  offset: const Offset(4, 4),
-                  blurRadius: 8,
-                ),
-              ],
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.arrow_back_rounded,
-              color: Color(0xFF2C3E50),
+            child: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: colorScheme.onSurface,
+              size: 18,
             ),
           ),
           onPressed: () => Get.back(),
@@ -143,43 +126,158 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
         title: Text(
           'Receipt Preview',
           style: AppText.poppins(
-            color: const Color(0xFF2C3E50),
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurface,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
       ),
       body: SingleChildScrollView(
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                // Receipt Image
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        offset: const Offset(6, 6),
-                        blurRadius: 12,
-                      ),
-                      BoxShadow(
-                        color: Colors.white.withOpacity(0.7),
-                        offset: const Offset(-6, -6),
-                        blurRadius: 12,
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Image.file(
-                      widget.imageFile,
-                      height: 250,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
+                // Receipt Image - Material 3 Card Style
+                GestureDetector(
+                  onTap: () => _showFullScreenImage(context),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1C2128) : Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primaryContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  Icons.receipt_long_rounded,
+                                  color: colorScheme.onPrimaryContainer,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Receipt Image',
+                                style: AppText.poppins(
+                                  color: colorScheme.onSurface,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Image
+                        Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: const BorderRadius.only(
+                                bottomLeft: Radius.circular(24),
+                                bottomRight: Radius.circular(24),
+                              ),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxHeight: 300,
+                                ),
+                                child: Image.file(
+                                  widget.imageFile,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      height: 300,
+                                      color:
+                                          colorScheme.surfaceContainerHighest,
+                                      child: Center(
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.broken_image_rounded,
+                                              size: 48,
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              'Unable to load image',
+                                              style: AppText.poppins(
+                                                color: colorScheme
+                                                    .onSurfaceVariant,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            // Tap to expand indicator
+                            Positioned(
+                              bottom: 16,
+                              right: 16,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(24),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          colorScheme.primary.withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.fullscreen_rounded,
+                                      color: colorScheme.onPrimary,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'View Full',
+                                      style: AppText.poppins(
+                                        color: colorScheme.onPrimary,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ).animate().fadeIn(duration: 400.ms).scale(delay: 100.ms),
@@ -187,19 +285,25 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
                 const SizedBox(height: 30),
 
                 // Transaction Type Dropdown
-                _buildTransactionTypeDropdown()
+                _buildTransactionTypeDropdown(colorScheme)
                     .animate()
                     .fadeIn(delay: 150.ms, duration: 400.ms)
                     .slideY(begin: 0.2, end: 0, delay: 150.ms),
 
                 const SizedBox(height: 20),
 
-                // Extracted Data (Editable) - Different fields based on transaction type
+                // Extracted Data (Read-only)
                 _buildDataCard(
-                  title: 'Extracted Information (Editable)',
-                  children: widget.receipt.transactionType == 'bank_transfer'
-                      ? _buildBankTransferFields(currencyFormat, dateFormat)
-                      : _buildMoneyTransferFields(currencyFormat, dateFormat),
+                  colorScheme: colorScheme,
+                  title: 'Extracted Information',
+                  children: isLoadTransaction
+                      ? _buildLoadFields(
+                          colorScheme, currencyFormat, dateFormat)
+                      : widget.receipt.transactionType == 'bank_transfer'
+                          ? _buildBankTransferFields(
+                              colorScheme, currencyFormat, dateFormat)
+                          : _buildMoneyTransferFields(
+                              colorScheme, currencyFormat, dateFormat),
                 )
                     .animate()
                     .fadeIn(delay: 200.ms, duration: 400.ms)
@@ -209,32 +313,89 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
 
                 // Action Buttons
                 if (isSaving)
-                  const Center(
-                    child: CircularProgressIndicator(
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(Color(0xFF64B5F6)),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1C2128) : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(
+                            color: colorScheme.primary,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Saving transaction...',
+                            style: AppText.poppins(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   )
                 else
                   Row(
                     children: [
                       Expanded(
-                        child: _buildActionButton(
-                          label: 'Cancel',
-                          icon: Icons.close_rounded,
-                          color: Colors.red.shade400,
-                          onTap: () {
-                            Get.back(); // Go back to scan page
-                          },
+                        child: OutlinedButton(
+                          onPressed: () => Get.back(),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: colorScheme.error,
+                            side:
+                                BorderSide(color: colorScheme.error, width: 2),
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.close_rounded, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Cancel',
+                                style: AppText.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: _buildActionButton(
-                          label: 'Save',
-                          icon: Icons.check_circle_rounded,
-                          color: const Color(0xFF4CAF50),
-                          onTap: _saveTransaction,
+                        flex: 2,
+                        child: FilledButton(
+                          onPressed: _showFeeHandlingDialog,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: colorScheme.primary,
+                            foregroundColor: colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.check_circle_rounded, size: 22),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Save Transaction',
+                                style: AppText.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -252,35 +413,258 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
     );
   }
 
-  Future<void> _saveTransaction() async {
+  void _showFeeHandlingDialog() {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            color: colorScheme.surface,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.help_outline_rounded,
+                  color: colorScheme.onPrimaryContainer,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Title
+              Text(
+                'Fee Handling',
+                style: AppText.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+
+              // Message
+              Text(
+                'Is the fee already included in the amount or paid in cash?',
+                style: AppText.poppins(
+                  fontSize: 14,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+
+              // Included button
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () {
+                    Get.back();
+                    _saveTransaction(feeIncluded: true);
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'Fee Included in Amount',
+                    style: AppText.poppins(
+                      color: colorScheme.onPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Cash button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () {
+                    Get.back();
+                    _saveTransaction(feeIncluded: false);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: colorScheme.primary,
+                    side: BorderSide(color: colorScheme.primary, width: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'Fee is Cash',
+                    style: AppText.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  Future<void> _saveTransaction({required bool feeIncluded}) async {
     try {
       setState(() => isSaving = true);
 
-      // Parse edited values
-      final amount =
-          double.tryParse(amountController.text) ?? widget.receipt.amount;
-      final fee = double.tryParse(feeController.text) ?? widget.receipt.fee;
+      // Use receipt values directly (non-editable)
+      final amount = widget.receipt.amount;
+      final fee = feeIncluded ? widget.receipt.fee : 0.0;
+      final separateFee = !feeIncluded ? widget.receipt.fee : 0.0;
+      final refNumber = widget.receipt.refNumber;
 
-      // Create transaction with edited values
+      // Check for duplicate reference number
+      if (refNumber.isNotEmpty) {
+        final isDuplicate =
+            await _transactionService.isReferenceNumberDuplicate(
+          controller.currentUserId.value,
+          refNumber,
+        );
+
+        if (isDuplicate) {
+          setState(() => isSaving = false);
+
+          final colorScheme = Theme.of(context).colorScheme;
+          // Show dialog for duplicate reference number
+          Get.dialog(
+            Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: colorScheme.surface,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Warning Icon
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: colorScheme.errorContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.warning_rounded,
+                        color: colorScheme.onErrorContainer,
+                        size: 36,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Title
+                    Text(
+                      'Duplicate Reference Number',
+                      style: AppText.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.error,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Message
+                    Text(
+                      'A transaction with reference number "$refNumber" already exists in your records.',
+                      style: AppText.poppins(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+
+                    Text(
+                      'Please rescan with a unique reference number.',
+                      style: AppText.poppins(
+                        fontSize: 13,
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Action Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () => Get.back(),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colorScheme.error,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Go Back',
+                          style: AppText.poppins(
+                            color: colorScheme.onError,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            barrierDismissible: true,
+          );
+          return;
+        }
+      }
+
+      // Create transaction with receipt values
       final transaction = TransactionModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         userId: controller.currentUserId.value,
-        recipientName: nameController.text.trim().isNotEmpty
-            ? nameController.text.trim()
-            : widget.receipt.recipientName,
-        phoneNumber: phoneController.text.trim().isNotEmpty
-            ? phoneController.text.trim()
-            : widget.receipt.phoneNumber,
+        recipientName: widget.receipt.recipientName,
+        phoneNumber: widget.receipt.phoneNumber,
         amount: amount,
         fee: fee,
-        totalAmount: amount + fee,
-        refNumber: refNumberController.text.trim().isNotEmpty
-            ? refNumberController.text.trim()
-            : widget.receipt.refNumber,
-        date: widget.receipt.date,
-        source: selectedSource, // Use the selected source from dropdown
-        transactionType: selectedTransactionType,
+        totalAmount: amount,
+        refNumber: refNumber,
+        date: DateTime.now(),
+        source: isLoadTransaction ? 'Load' : selectedSource,
+        transactionType: selectedTransactionType == 'Load'
+            ? 'Cash Out'
+            : selectedTransactionType,
         createdAt: DateTime.now(),
+        separateFee: separateFee,
       );
 
       // Save to Firestore
@@ -290,14 +674,14 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
 
       // Go back to dashboard
       Get.back();
-      Get.back(); // Close scan page too
+      Get.back();
 
       // Show success message
       Get.snackbar(
         'Success',
         'Transaction saved successfully!',
-        backgroundColor: const Color(0xFF4CAF50),
-        colorText: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        colorText: Theme.of(context).colorScheme.onPrimaryContainer,
         snackPosition: SnackPosition.TOP,
         margin: const EdgeInsets.all(20),
         borderRadius: 16,
@@ -309,8 +693,8 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
       Get.snackbar(
         'Error',
         'Failed to save transaction: ${e.toString()}',
-        backgroundColor: Colors.red.shade400,
-        colorText: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.errorContainer,
+        colorText: Theme.of(context).colorScheme.onErrorContainer,
         snackPosition: SnackPosition.TOP,
         margin: const EdgeInsets.all(20),
         borderRadius: 16,
@@ -319,87 +703,136 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
     }
   }
 
-  Widget _buildTransactionTypeDropdown() {
+  Widget _buildTransactionTypeDropdown(ColorScheme colorScheme) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFE0E5EC),
+        color: isDark ? const Color(0xFF1C2128) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.white.withOpacity(0.8),
-            offset: const Offset(-6, -6),
-            blurRadius: 12,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            offset: const Offset(6, 6),
-            blurRadius: 12,
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF64B5F6),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF64B5F6).withOpacity(0.4),
-                  blurRadius: 8,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      colorScheme.primary,
+                      colorScheme.primary.withOpacity(0.8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
-            ),
-            child: const Icon(
-              Icons.swap_horiz_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
+                child: Icon(
+                  Icons.category_rounded,
+                  color: colorScheme.onPrimary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Transaction Type',
+                style: AppText.poppins(
+                  color: colorScheme.onSurface,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Transaction Type',
-                  style: AppText.poppins(
-                    color: const Color(0xFF64B5F6),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: colorScheme.outlineVariant,
+                width: 1,
+              ),
+            ),
+            child: DropdownButton<String>(
+              value: selectedTransactionType,
+              isExpanded: true,
+              underline: const SizedBox(),
+              icon: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: colorScheme.primary,
+                size: 24,
+              ),
+              style: AppText.poppins(
+                color: colorScheme.onSurface,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+              dropdownColor: isDark ? const Color(0xFF1C2128) : Colors.white,
+              items: transactionTypeOptions.map((String value) {
+                IconData icon;
+                Color iconColor;
+
+                switch (value) {
+                  case 'Cash In':
+                    icon = Icons.arrow_downward_rounded;
+                    iconColor = const Color(0xFF10B981);
+                    break;
+                  case 'Cash Out':
+                    icon = Icons.arrow_upward_rounded;
+                    iconColor = const Color(0xFFEF4444);
+                    break;
+                  case 'Load':
+                    icon = Icons.phone_android_rounded;
+                    iconColor = const Color(0xFF3B82F6);
+                    break;
+                  case 'Bank Transfer':
+                    icon = Icons.account_balance_rounded;
+                    iconColor = const Color(0xFF8B5CF6);
+                    break;
+                  default:
+                    icon = Icons.swap_horiz_rounded;
+                    iconColor = colorScheme.primary;
+                }
+
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: iconColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          icon,
+                          size: 16,
+                          color: iconColor,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(value),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 4),
-                DropdownButton<String>(
-                  value: selectedTransactionType,
-                  isExpanded: true,
-                  underline: const SizedBox(),
-                  icon: const Icon(
-                    Icons.arrow_drop_down_rounded,
-                    color: Color(0xFF2C3E50),
-                  ),
-                  style: AppText.poppins(
-                    color: const Color(0xFF2C3E50),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  items: transactionTypeOptions.map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      setState(() {
-                        selectedTransactionType = newValue;
-                      });
-                    }
-                  },
-                ),
-              ],
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    selectedTransactionType = newValue;
+                  });
+                }
+              },
             ),
           ),
         ],
@@ -407,7 +840,7 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
     );
   }
 
-  Widget _buildSourceDropdown() {
+  Widget _buildSourceDropdown(ColorScheme colorScheme) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -415,12 +848,12 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF64B5F6).withOpacity(0.1),
+              color: colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.account_balance_wallet,
-              color: Color(0xFF64B5F6),
+              color: colorScheme.onPrimaryContainer,
               size: 20,
             ),
           ),
@@ -432,7 +865,7 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
                 Text(
                   'Source',
                   style: AppText.poppins(
-                    color: const Color(0xFF64B5F6),
+                    color: colorScheme.primary,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -442,12 +875,12 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
                   value: selectedSource,
                   isExpanded: true,
                   underline: const SizedBox(),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.arrow_drop_down_rounded,
-                    color: Color(0xFF2C3E50),
+                    color: colorScheme.onSurface,
                   ),
                   style: AppText.poppins(
-                    color: const Color(0xFF2C3E50),
+                    color: colorScheme.onSurface,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
@@ -474,37 +907,52 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
   }
 
   Widget _buildDataCard({
+    required ColorScheme colorScheme,
     required String title,
     required List<Widget> children,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFE0E5EC),
+        color: isDark ? const Color(0xFF1C2128) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.white.withOpacity(0.8),
-            offset: const Offset(-6, -6),
-            blurRadius: 12,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            offset: const Offset(6, 6),
-            blurRadius: 12,
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: AppText.poppins(
-              color: const Color(0xFF2C3E50),
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.receipt_rounded,
+                  color: colorScheme.onSecondaryContainer,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: AppText.poppins(
+                  color: colorScheme.onSurface,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           ...children,
@@ -513,108 +961,165 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
     );
   }
 
-  // Build fields for bank transfer
-  List<Widget> _buildBankTransferFields(
+  // Build fields for load transaction (non-editable)
+  List<Widget> _buildLoadFields(ColorScheme colorScheme,
       NumberFormat currencyFormat, DateFormat dateFormat) {
     return [
-      _buildEditableField('Bank', phoneController, Icons.account_balance),
-      _buildDivider(),
-      _buildEditableField('Account Name', nameController, Icons.person_outline),
-      _buildDivider(),
-      _buildEditableField(
-          'Transfer Amount', amountController, Icons.attach_money,
-          keyboardType: TextInputType.number, prefix: '₱'),
-      _buildDivider(),
-      _buildEditableField('Bank Fee (+Fee)', feeController, Icons.receipt_long,
-          keyboardType: TextInputType.number, prefix: '₱'),
-      _buildDivider(),
+      // Provider Name (from recipient name)
+      _buildInfoRow(colorScheme, 'Provider', widget.receipt.recipientName,
+          Icons.business),
+      _buildDivider(colorScheme),
+      // Phone Number
+      _buildInfoRow(colorScheme, 'Phone Number', widget.receipt.phoneNumber,
+          Icons.phone_android),
+      _buildDivider(colorScheme),
+      // Load Amount
+      _buildInfoRow(colorScheme, 'Load Amount',
+          currencyFormat.format(widget.receipt.amount), Icons.attach_money),
+      _buildDivider(colorScheme),
+      // Convenience Fee
+      _buildInfoRow(colorScheme, 'Convenience Fee',
+          currencyFormat.format(widget.receipt.fee), Icons.receipt_long),
+      _buildDivider(colorScheme),
+      // Total Amount
       _buildInfoRow(
+        colorScheme,
         'Total',
-        currencyFormat.format(_calculateTotal()),
+        currencyFormat.format(widget.receipt.amount + widget.receipt.fee),
         Icons.payments,
         isHighlighted: true,
       ),
-      _buildDivider(),
-      _buildEditableField('Ref No.', refNumberController, Icons.tag),
-      _buildDivider(),
+      _buildDivider(colorScheme),
+      // Reference Number (9 digits)
       _buildInfoRow(
-        'Transfer Date',
-        dateFormat.format(widget.receipt.date),
-        Icons.calendar_today,
-      ),
-      _buildDivider(),
-      _buildSourceDropdown(),
-    ];
-  }
-
-  // Build fields for money transfer
-  List<Widget> _buildMoneyTransferFields(
-      NumberFormat currencyFormat, DateFormat dateFormat) {
-    return [
-      _buildEditableField('Recipient', nameController, Icons.person),
-      _buildDivider(),
-      _buildEditableField('Phone Number', phoneController, Icons.phone,
-          keyboardType: TextInputType.phone),
-      _buildDivider(),
-      _buildEditableField('Amount', amountController, Icons.attach_money,
-          keyboardType: TextInputType.number, prefix: '₱'),
-      _buildDivider(),
-      _buildEditableField('Fee', feeController, Icons.receipt_long,
-          keyboardType: TextInputType.number, prefix: '₱'),
-      _buildDivider(),
+          colorScheme, 'Reference Number', widget.receipt.refNumber, Icons.tag),
+      _buildDivider(colorScheme),
+      // Date
       _buildInfoRow(
-        'Total',
-        currencyFormat.format(_calculateTotal()),
-        Icons.payments,
-        isHighlighted: true,
-      ),
-      _buildDivider(),
-      _buildEditableField('Ref Number', refNumberController, Icons.tag),
-      _buildDivider(),
-      _buildInfoRow(
+        colorScheme,
         'Date',
         dateFormat.format(widget.receipt.date),
         Icons.calendar_today,
       ),
-      _buildDivider(),
-      _buildSourceDropdown(),
+    ];
+  }
+
+  // Build fields for bank transfer (non-editable)
+  List<Widget> _buildBankTransferFields(ColorScheme colorScheme,
+      NumberFormat currencyFormat, DateFormat dateFormat) {
+    return [
+      _buildInfoRow(colorScheme, 'Bank', widget.receipt.phoneNumber,
+          Icons.account_balance),
+      _buildDivider(colorScheme),
+      _buildInfoRow(colorScheme, 'Account Name', widget.receipt.recipientName,
+          Icons.person_outline),
+      _buildDivider(colorScheme),
+      _buildInfoRow(colorScheme, 'Transfer Amount',
+          currencyFormat.format(widget.receipt.amount), Icons.attach_money),
+      _buildDivider(colorScheme),
+      _buildInfoRow(colorScheme, 'Bank Fee',
+          currencyFormat.format(widget.receipt.fee), Icons.receipt_long),
+      _buildDivider(colorScheme),
+      _buildInfoRow(
+        colorScheme,
+        'Total',
+        currencyFormat.format(widget.receipt.amount + widget.receipt.fee),
+        Icons.payments,
+        isHighlighted: true,
+      ),
+      _buildDivider(colorScheme),
+      _buildInfoRow(
+          colorScheme, 'Ref No.', widget.receipt.refNumber, Icons.tag),
+      _buildDivider(colorScheme),
+      _buildInfoRow(
+        colorScheme,
+        'Transfer Date',
+        dateFormat.format(widget.receipt.date),
+        Icons.calendar_today,
+      ),
+      _buildDivider(colorScheme),
+      _buildSourceDropdown(colorScheme),
+    ];
+  }
+
+  // Build fields for money transfer (non-editable)
+  List<Widget> _buildMoneyTransferFields(ColorScheme colorScheme,
+      NumberFormat currencyFormat, DateFormat dateFormat) {
+    return [
+      _buildInfoRow(
+          colorScheme, 'Recipient', widget.receipt.recipientName, Icons.person),
+      _buildDivider(colorScheme),
+      _buildInfoRow(
+          colorScheme, 'Phone Number', widget.receipt.phoneNumber, Icons.phone),
+      _buildDivider(colorScheme),
+      _buildInfoRow(colorScheme, 'Amount',
+          currencyFormat.format(widget.receipt.amount), Icons.attach_money),
+      _buildDivider(colorScheme),
+      _buildInfoRow(colorScheme, 'Fee',
+          currencyFormat.format(widget.receipt.fee), Icons.receipt_long),
+      _buildDivider(colorScheme),
+      _buildInfoRow(
+        colorScheme,
+        'Total',
+        currencyFormat.format(widget.receipt.amount + widget.receipt.fee),
+        Icons.payments,
+        isHighlighted: true,
+      ),
+      _buildDivider(colorScheme),
+      _buildInfoRow(
+          colorScheme, 'Ref Number', widget.receipt.refNumber, Icons.tag),
+      _buildDivider(colorScheme),
+      _buildInfoRow(
+        colorScheme,
+        'Date',
+        dateFormat.format(widget.receipt.date),
+        Icons.calendar_today,
+      ),
+      _buildDivider(colorScheme),
+      _buildSourceDropdown(colorScheme),
     ];
   }
 
   Widget _buildInfoRow(
+    ColorScheme colorScheme,
     String label,
     String value,
     IconData icon, {
     bool isHighlighted = false,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isHighlighted
+            ? colorScheme.primaryContainer.withOpacity(0.3)
+            : colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isHighlighted
-                  ? const Color(0xFF4CAF50)
-                  : const Color(0xFF64B5F6),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: (isHighlighted
-                          ? const Color(0xFF4CAF50)
-                          : const Color(0xFF64B5F6))
-                      .withOpacity(0.4),
-                  blurRadius: 8,
-                ),
-              ],
+              gradient: isHighlighted
+                  ? LinearGradient(
+                      colors: [
+                        colorScheme.primary,
+                        colorScheme.primary.withOpacity(0.7),
+                      ],
+                    )
+                  : null,
+              color:
+                  isHighlighted ? null : colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icon,
-              color: Colors.white,
-              size: 18,
+              color:
+                  isHighlighted ? colorScheme.onPrimary : colorScheme.primary,
+              size: 20,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,7 +1127,7 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
                 Text(
                   label,
                   style: AppText.poppins(
-                    color: const Color(0xFF64B5F6),
+                    color: colorScheme.onSurfaceVariant,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -631,11 +1136,13 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
                 Text(
                   value,
                   style: AppText.poppins(
-                    color: const Color(0xFF2C3E50),
+                    color: colorScheme.onSurface,
                     fontSize: isHighlighted ? 18 : 15,
                     fontWeight:
-                        isHighlighted ? FontWeight.bold : FontWeight.w600,
+                        isHighlighted ? FontWeight.w700 : FontWeight.w600,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
                 ),
               ],
             ),
@@ -645,164 +1152,81 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
     );
   }
 
-  Widget _buildDivider() {
-    return Container(
-      height: 1,
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.transparent,
-            const Color(0xFF64B5F6).withOpacity(0.3),
-            Colors.transparent,
-          ],
-        ),
-      ),
-    );
+  Widget _buildDivider(ColorScheme colorScheme) {
+    return const SizedBox(height: 8);
   }
 
-  Widget _buildActionButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 60,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [color, color.withOpacity(0.8)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.4),
-              offset: const Offset(0, 4),
-              blurRadius: 12,
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.white, size: 24),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: AppText.poppins(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+  void _showFullScreenImage(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(
+            children: [
+              // Full screen image with pinch to zoom
+              Center(
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.file(
+                    widget.imageFile,
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
-            ),
-          ],
+              // Close button
+              SafeArea(
+                child: Positioned(
+                  top: 16,
+                  right: 16,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Instructions
+              SafeArea(
+                child: Positioned(
+                  bottom: 24,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Pinch to zoom • Drag to pan',
+                        style: AppText.poppins(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
+        fullscreenDialog: true,
       ),
     );
-  }
-
-  Widget _buildEditableField(
-    String label,
-    TextEditingController controller,
-    IconData icon, {
-    TextInputType keyboardType = TextInputType.text,
-    String? prefix,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF64B5F6),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF64B5F6).withOpacity(0.4),
-                  blurRadius: 8,
-                ),
-              ],
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: AppText.poppins(
-                    color: const Color(0xFF64B5F6),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: controller,
-                  keyboardType: keyboardType,
-                  style: AppText.poppins(
-                    color: const Color(0xFF2C3E50),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF64B5F6),
-                        width: 1,
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: const Color(0xFF64B5F6).withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF64B5F6),
-                        width: 2,
-                      ),
-                    ),
-                    prefixText: prefix,
-                    prefixStyle: AppText.poppins(
-                      color: const Color(0xFF2C3E50),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setState(() {}); // Refresh total when amount/fee changes
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  double _calculateTotal() {
-    final amount = double.tryParse(amountController.text) ?? 0.0;
-    final fee = double.tryParse(feeController.text) ?? 0.0;
-    return amount + fee;
   }
 }

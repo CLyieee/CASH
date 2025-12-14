@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../controllers/app_controller.dart';
 import '../models/user_model.dart';
 import '../utils/app_text.dart';
+import 'package:g/utils/responsive_helper.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class FeeSettingsPage extends StatefulWidget {
@@ -18,8 +19,18 @@ class _FeeSettingsPageState extends State<FeeSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = Theme.of(context).scaffoldBackgroundColor;
+    final textPrimary = Theme.of(context).colorScheme.onSurface;
+    final cardSurface = isDark ? const Color(0xFF111A2E) : Colors.white;
+    final cardBorder = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.05);
+    final accentBlue =
+        isDark ? const Color(0xFF5B9FFF) : const Color(0xFF3B82F6);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFE0E5EC),
+      backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -27,24 +38,14 @@ class _FeeSettingsPageState extends State<FeeSettingsPage> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFE0E5EC),
+              color: cardSurface,
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.white.withOpacity(0.8),
-                  offset: const Offset(-4, -4),
-                  blurRadius: 8,
-                ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  offset: const Offset(4, 4),
-                  blurRadius: 8,
-                ),
-              ],
+              border: Border.all(color: cardBorder),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.arrow_back_rounded,
-              color: Color(0xFF2C3E50),
+              color: textPrimary,
+              size: 20,
             ),
           ),
           onPressed: () => Get.back(),
@@ -52,8 +53,8 @@ class _FeeSettingsPageState extends State<FeeSettingsPage> {
         title: Text(
           'Fee Configuration',
           style: AppText.poppins(
-            color: const Color(0xFF2C3E50),
-            fontSize: 20,
+            color: textPrimary,
+            fontSize: ResponsiveHelper.fontSize(context, mobile: 20),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -63,7 +64,8 @@ class _FeeSettingsPageState extends State<FeeSettingsPage> {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding:
+                  EdgeInsets.all(ResponsiveHelper.horizontalPadding(context)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -71,18 +73,16 @@ class _FeeSettingsPageState extends State<FeeSettingsPage> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE0E5EC),
+                      color: cardSurface,
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: cardBorder),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.white.withOpacity(0.8),
-                          offset: const Offset(-4, -4),
+                          color: isDark
+                              ? Colors.black.withOpacity(0.3)
+                              : Colors.black.withOpacity(0.05),
                           blurRadius: 10,
-                        ),
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          offset: const Offset(4, 4),
-                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -91,22 +91,27 @@ class _FeeSettingsPageState extends State<FeeSettingsPage> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF64B5F6).withOpacity(0.2),
+                            color: accentBlue.withOpacity(0.15),
                             shape: BoxShape.circle,
+                            border: Border.all(
+                              color: accentBlue.withOpacity(0.3),
+                              width: 1,
+                            ),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.info_outline,
-                            color: Color(0xFF64B5F6),
+                            color: accentBlue,
                             size: 24,
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Expanded(
+                        Flexible(
                           child: Text(
                             'Set up fee ranges for money transfers. The fee will be automatically calculated based on the transaction amount.',
                             style: AppText.poppins(
-                              color: const Color(0xFF2C3E50),
-                              fontSize: 13,
+                              color: textPrimary,
+                              fontSize: ResponsiveHelper.fontSize(context,
+                                  mobile: 13),
                               height: 1.5,
                             ),
                           ),
@@ -134,60 +139,58 @@ class _FeeSettingsPageState extends State<FeeSettingsPage> {
                   const SizedBox(height: 20),
 
                   // Add Fee Range Button
-                  GestureDetector(
-                    onTap: () {
-                      controller.addFeeRange(FeeRange(from: 0, to: 0, fee: 0));
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0E5EC),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.8),
-                            offset: const Offset(-4, -4),
-                            blurRadius: 10,
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            offset: const Offset(4, 4),
-                            blurRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF64B5F6),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                      const Color(0xFF64B5F6).withOpacity(0.4),
-                                  blurRadius: 8,
-                                ),
-                              ],
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        controller
+                            .addFeeRange(FeeRange(from: 0, to: 0, fee: 0));
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: cardSurface,
+                          borderRadius: BorderRadius.circular(16),
+                          border:
+                              Border.all(color: accentBlue.withOpacity(0.5)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark
+                                  ? Colors.black.withOpacity(0.3)
+                                  : Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
-                            child: const Icon(
-                              Icons.add,
-                              color: Colors.white,
-                              size: 20,
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: accentBlue,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.add,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Add Fee Range',
-                            style: AppText.poppins(
-                              color: const Color(0xFF64B5F6),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                            const SizedBox(width: 12),
+                            Text(
+                              'Add Fee Range',
+                              style: AppText.poppins(
+                                color: accentBlue,
+                                fontSize: ResponsiveHelper.fontSize(context,
+                                    mobile: 16),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -202,52 +205,58 @@ class _FeeSettingsPageState extends State<FeeSettingsPage> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFFE0E5EC),
+              color: bgColor,
+              border: Border(top: BorderSide(color: cardBorder)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: isDark
+                      ? Colors.black.withOpacity(0.3)
+                      : Colors.black.withOpacity(0.05),
                   offset: const Offset(0, -4),
                   blurRadius: 10,
                 ),
               ],
             ),
             child: SafeArea(
-              child: GestureDetector(
-                onTap: _isSaving ? null : _saveFeeSettings,
-                child: Container(
-                  height: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF64B5F6), Color(0xFF42A5F5)],
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _isSaving ? null : _saveFeeSettings,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    height: 60,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      color: accentBlue,
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentBlue.withOpacity(0.3),
+                          offset: const Offset(0, 4),
+                          blurRadius: 12,
+                        ),
+                      ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF64B5F6).withOpacity(0.4),
-                        offset: const Offset(0, 4),
-                        blurRadius: 12,
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                    child: Center(
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Text(
+                              'Save Changes',
+                              style: AppText.poppins(
+                                color: Colors.white,
+                                fontSize: ResponsiveHelper.fontSize(context,
+                                    mobile: 18),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          )
-                        : Text(
-                            'Save Changes',
-                            style: AppText.poppins(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                    ),
                   ),
                 ),
               ),
@@ -259,22 +268,28 @@ class _FeeSettingsPageState extends State<FeeSettingsPage> {
   }
 
   Widget _buildFeeRangeCard(int index) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = Theme.of(context).colorScheme.onSurface;
+    final cardSurface = isDark ? const Color(0xFF111A2E) : Colors.white;
+    final cardBorder = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.05);
+    final dangerColor = isDark ? const Color(0xFFFF5F6D) : Colors.redAccent;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFE0E5EC),
+        color: cardSurface,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cardBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.white.withOpacity(0.8),
-            offset: const Offset(-4, -4),
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            offset: const Offset(4, 4),
-            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -283,39 +298,37 @@ class _FeeSettingsPageState extends State<FeeSettingsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Range ${index + 1}',
-                style: AppText.poppins(
-                  color: const Color(0xFF2C3E50),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              Flexible(
+                child: Text(
+                  'Range ${index + 1}',
+                  style: AppText.poppins(
+                    color: textPrimary,
+                    fontSize: ResponsiveHelper.fontSize(context, mobile: 16),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               if (controller.feeRanges.length > 1)
-                GestureDetector(
-                  onTap: () => controller.removeFeeRange(index),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE0E5EC),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.8),
-                          offset: const Offset(-2, -2),
-                          blurRadius: 4,
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => controller.removeFeeRange(index),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: dangerColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: dangerColor.withOpacity(0.3),
+                          width: 1,
                         ),
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          offset: const Offset(2, 2),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.close_rounded,
-                      color: Colors.redAccent,
-                      size: 18,
+                      ),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: dangerColor,
+                        size: 16,
+                      ),
                     ),
                   ),
                 ),
@@ -392,42 +405,38 @@ class _FeeSettingsPageState extends State<FeeSettingsPage> {
     required String value,
     required Function(String) onChanged,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = Theme.of(context).colorScheme.onSurface;
+    final textSecondary = isDark ? Colors.white60 : Colors.black54;
+    final inputBg = isDark ? const Color(0xFF1A2235) : const Color(0xFFF8F9FA);
+    final inputBorder =
+        isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.08);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: AppText.poppins(
-            color: const Color(0xFF2C3E50).withOpacity(0.6),
-            fontSize: 12,
+            color: textSecondary,
+            fontSize: ResponsiveHelper.fontSize(context, mobile: 12),
             fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFE0E5EC),
+            color: inputBg,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.white.withOpacity(0.8),
-                offset: const Offset(-2, -2),
-                blurRadius: 6,
-              ),
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                offset: const Offset(2, 2),
-                blurRadius: 6,
-              ),
-            ],
+            border: Border.all(color: inputBorder),
           ),
           child: TextFormField(
             initialValue: value,
             keyboardType: TextInputType.number,
             onChanged: onChanged,
             style: AppText.poppins(
-              color: const Color(0xFF2C3E50),
-              fontSize: 14,
+              color: textPrimary,
+              fontSize: ResponsiveHelper.fontSize(context, mobile: 14),
               fontWeight: FontWeight.w600,
             ),
             decoration: InputDecoration(
@@ -438,7 +447,7 @@ class _FeeSettingsPageState extends State<FeeSettingsPage> {
               ),
               hintText: '0',
               hintStyle: AppText.poppins(
-                color: const Color(0xFF2C3E50).withOpacity(0.3),
+                color: textSecondary.withOpacity(0.4),
                 fontSize: 14,
               ),
             ),

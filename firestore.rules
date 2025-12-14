@@ -2,16 +2,95 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Users collection - users can read/write their own data
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Helper functions for validation
+    function isAuthenticated() {
+      return request.auth != null;
     }
     
-    // Transactions collection - users can read/write their own transactions
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Users collection - only the user can read/write their own data
+    match /users/{userId} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      allow create: if isAuthenticated() 
+                    && isOwner(userId)
+                    && request.resource.data.keys().hasAll(['name', 'email', 'createdAt'])
+                    && request.resource.data.name is string
+                    && request.resource.data.email is string;
+      
+      allow update: if isAuthenticated() && isOwner(userId);
+      
+      allow delete: if isAuthenticated() && isOwner(userId);
+    }
+    
+    // Transactions collection - users can only access their own transactions
     match /transactions/{transactionId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Read: only if user owns the transaction
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      
+      // Create: only if authenticated and the userId matches auth.uid
+      allow create: if isAuthenticated() 
+                    && isOwner(request.resource.data.userId)
+                    && request.resource.data.keys().hasAll(['userId', 'amount', 'transactionType', 'createdAt'])
+                    && request.resource.data.amount is number
+                    && request.resource.data.amount > 0
+                    && request.resource.data.transactionType in ['Cash In', 'Cash Out'];
+      
+      // Update: only if user owns the transaction
+      allow update: if isAuthenticated() 
+                    && isOwner(resource.data.userId)
+                    && request.resource.data.userId == resource.data.userId; // Prevent userId change
+      
+      // Delete: only if user owns the transaction
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+    
+    // Backups collection - users can manage their own backups
+    match /backups/{backupId} {
+      // Read: only if user owns the backup
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      
+      // Create: only if authenticated and userId matches
+      allow create: if isAuthenticated() 
+                    && isOwner(request.resource.data.userId);
+      
+      // Delete: only if user owns the backup
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+      
+      // Allow access to sub-collections (transactions, data)
+      match /{document=**} {
+        allow read, write: if isAuthenticated() && isOwner(get(/databases/$(database)/documents/backups/$(backupId)).data.userId);
+      }
+    }
+    
+    // OTP codes collection - for PIN reset functionality
+    match /otp_codes/{userId} {
+      // Read: only the user can read their own OTP
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Create: authenticated users can create OTP for themselves
+      allow create: if isAuthenticated() 
+                    && isOwner(userId)
+                    && request.resource.data.keys().hasAll(['otp', 'email', 'expiryTime', 'createdAt', 'used'])
+                    && request.resource.data.otp is string
+                    && request.resource.data.email is string
+                    && request.resource.data.used == false;
+      
+      // Update: only to mark as used or verify
+      allow update: if isAuthenticated() 
+                    && isOwner(userId)
+                    && request.resource.data.email == resource.data.email; // Email can't be changed
+      
+      // Delete: users can delete their own expired OTPs
+      allow delete: if isAuthenticated() && isOwner(userId);
+    }
+    
+    // Default: deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

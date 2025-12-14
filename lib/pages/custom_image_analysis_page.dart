@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../controllers/gemini_controller.dart';
+import '../services/notification_service.dart';
+import 'package:g/utils/responsive_helper.dart';
 
 class CustomImageAnalysisPage extends StatefulWidget {
   const CustomImageAnalysisPage({super.key});
@@ -136,12 +138,7 @@ class _CustomImageAnalysisPageState extends State<CustomImageAnalysisPage> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
-    );
+    NotificationService.showError(message);
   }
 
   @override
@@ -154,13 +151,13 @@ class _CustomImageAnalysisPageState extends State<CustomImageAnalysisPage> {
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(ResponsiveHelper.horizontalPadding(context)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Image Selection
             _buildImageSection(),
-            const SizedBox(height: 24),
+            SizedBox(height: ResponsiveHelper.spacing(context, mobile: 24)),
 
             // Tab Selection
             DefaultTabController(
@@ -178,7 +175,7 @@ class _CustomImageAnalysisPageState extends State<CustomImageAnalysisPage> {
                     ],
                   ),
                   SizedBox(
-                    height: 400,
+                    height: ResponsiveHelper.isSmallScreen(context) ? 300 : 400,
                     child: TabBarView(
                       children: [
                         _buildReceiptTab(),
@@ -203,24 +200,32 @@ class _CustomImageAnalysisPageState extends State<CustomImageAnalysisPage> {
   Widget _buildImageSection() {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+              ResponsiveHelper.borderRadius(context, base: 12))),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: ResponsiveHelper.cardPadding(context),
         child: Column(
           children: [
             if (_selectedImage != null)
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.file(
-                  _selectedImage!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+                borderRadius: BorderRadius.circular(
+                    ResponsiveHelper.borderRadius(context, base: 8)),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight:
+                        ResponsiveHelper.isSmallScreen(context) ? 150 : 200,
+                  ),
+                  child: Image.file(
+                    _selectedImage!,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               )
             else
               Container(
-                height: 200,
+                height: ResponsiveHelper.isSmallScreen(context) ? 150 : 200,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(8),
@@ -269,15 +274,17 @@ class _CustomImageAnalysisPageState extends State<CustomImageAnalysisPage> {
 
   Widget _buildReceiptTab() {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: ResponsiveHelper.cardPadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Automatically extract receipt information',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+            style: TextStyle(
+                fontSize: ResponsiveHelper.fontSize(context, mobile: 14),
+                color: Colors.grey),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: ResponsiveHelper.spacing(context, mobile: 16)),
           Obx(() => ElevatedButton(
                 onPressed:
                     geminiController.isLoading.value ? null : _analyzeReceipt,
@@ -304,15 +311,17 @@ class _CustomImageAnalysisPageState extends State<CustomImageAnalysisPage> {
 
   Widget _buildCustomFieldsTab() {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: ResponsiveHelper.cardPadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Specify exact fields to extract',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+            style: TextStyle(
+                fontSize: ResponsiveHelper.fontSize(context, mobile: 14),
+                color: Colors.grey),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: ResponsiveHelper.spacing(context, mobile: 16)),
           Expanded(
             child: ListView.builder(
               shrinkWrap: true,
@@ -386,15 +395,17 @@ class _CustomImageAnalysisPageState extends State<CustomImageAnalysisPage> {
 
   Widget _buildCustomAnalysisTab() {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: ResponsiveHelper.cardPadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Describe what you want to analyze',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+            style: TextStyle(
+                fontSize: ResponsiveHelper.fontSize(context, mobile: 14),
+                color: Colors.grey),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: ResponsiveHelper.spacing(context, mobile: 16)),
           TextField(
             controller: _requirementsController,
             maxLines: 5,
@@ -445,10 +456,10 @@ class _CustomImageAnalysisPageState extends State<CustomImageAnalysisPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Results',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: ResponsiveHelper.fontSize(context, mobile: 18),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -468,7 +479,8 @@ class _CustomImageAnalysisPageState extends State<CustomImageAnalysisPage> {
             else if (_customAnalysis != null)
               SelectableText(
                 _customAnalysis!,
-                style: const TextStyle(fontSize: 14),
+                style: TextStyle(
+                    fontSize: ResponsiveHelper.fontSize(context, mobile: 14)),
               ),
           ],
         ),

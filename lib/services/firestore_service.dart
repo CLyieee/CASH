@@ -68,6 +68,18 @@ class FirestoreService {
     }
   }
 
+  // Update user photo URL
+  Future<void> updateUserPhotoUrl(String uid, String photoUrl) async {
+    try {
+      await _firestore.collection(_usersCollection).doc(uid).update({
+        'photoUrl': photoUrl,
+      });
+    } catch (e) {
+      print('Error updating user photo URL: $e');
+      rethrow;
+    }
+  }
+
   // Update user PIN
   Future<void> updateUserPin(String uid, String pin) async {
     try {

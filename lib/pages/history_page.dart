@@ -3,6 +3,7 @@ import 'package:g/utils/app_text.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:g/utils/responsive_helper.dart';
 import '../controllers/app_controller.dart';
 import '../services/transaction_service.dart';
 import '../models/transaction_model.dart';
@@ -90,7 +91,8 @@ class _HistoryPageState extends State<HistoryPage> {
           children: [
             // Header with neumorphic style
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding:
+                  EdgeInsets.all(ResponsiveHelper.horizontalPadding(context)),
               child: Row(
                 children: [
                   IconButton(
@@ -112,9 +114,10 @@ class _HistoryPageState extends State<HistoryPage> {
                           ),
                         ],
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.arrow_back_rounded,
-                        color: Color(0xFF2C3E50),
+                        color: const Color(0xFF2C3E50),
+                        size: ResponsiveHelper.iconSize(context, base: 24),
                       ),
                     ),
                     onPressed: () => Get.back(),
@@ -125,7 +128,8 @@ class _HistoryPageState extends State<HistoryPage> {
                       'History',
                       style: AppText.poppins(
                         color: const Color(0xFF2C3E50),
-                        fontSize: 22,
+                        fontSize:
+                            ResponsiveHelper.fontSize(context, mobile: 22),
                         fontWeight: FontWeight.bold,
                         shadows: [
                           Shadow(
@@ -148,7 +152,9 @@ class _HistoryPageState extends State<HistoryPage> {
 
             // Search bar with neumorphic style
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: EdgeInsets.symmetric(
+                horizontal: ResponsiveHelper.horizontalPadding(context),
+              ),
               child: Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFFE0E5EC),
@@ -168,11 +174,12 @@ class _HistoryPageState extends State<HistoryPage> {
                 ),
                 child: Row(
                   children: [
-                    const SizedBox(width: 20),
-                    const Icon(
+                    SizedBox(
+                        width: ResponsiveHelper.horizontalPadding(context)),
+                    Icon(
                       Icons.search_rounded,
-                      color: Color(0xFF64B5F6),
-                      size: 22,
+                      color: const Color(0xFF64B5F6),
+                      size: ResponsiveHelper.iconSize(context, base: 22),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -185,13 +192,15 @@ class _HistoryPageState extends State<HistoryPage> {
                         },
                         style: AppText.poppins(
                           color: const Color(0xFF2C3E50),
-                          fontSize: 15,
+                          fontSize:
+                              ResponsiveHelper.fontSize(context, mobile: 15),
                         ),
                         decoration: InputDecoration(
                           hintText: 'Search Reference',
                           hintStyle: AppText.poppins(
                             color: const Color(0xFF2C3E50).withOpacity(0.4),
-                            fontSize: 15,
+                            fontSize:
+                                ResponsiveHelper.fontSize(context, mobile: 15),
                           ),
                           border: InputBorder.none,
                           contentPadding:
@@ -225,8 +234,10 @@ class _HistoryPageState extends State<HistoryPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Container(
-                                width: 100,
-                                height: 100,
+                                width: ResponsiveHelper.iconSize(context,
+                                    base: 100),
+                                height: ResponsiveHelper.iconSize(context,
+                                    base: 100),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE0E5EC),
                                   shape: BoxShape.circle,
@@ -243,10 +254,11 @@ class _HistoryPageState extends State<HistoryPage> {
                                     ),
                                   ],
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.history_rounded,
-                                  size: 50,
-                                  color: Color(0xFF64B5F6),
+                                  size: ResponsiveHelper.iconSize(context,
+                                      base: 50),
+                                  color: const Color(0xFF64B5F6),
                                 ),
                               ),
                               const SizedBox(height: 20),
@@ -255,7 +267,8 @@ class _HistoryPageState extends State<HistoryPage> {
                                 style: AppText.poppins(
                                   color:
                                       const Color(0xFF2C3E50).withOpacity(0.6),
-                                  fontSize: 16,
+                                  fontSize: ResponsiveHelper.fontSize(context,
+                                      mobile: 16),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -263,7 +276,10 @@ class _HistoryPageState extends State<HistoryPage> {
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          padding: EdgeInsets.symmetric(
+                            horizontal:
+                                ResponsiveHelper.horizontalPadding(context),
+                          ),
                           itemCount: groupedTransactions.keys.length,
                           itemBuilder: (context, index) {
                             String month =
@@ -282,7 +298,9 @@ class _HistoryPageState extends State<HistoryPage> {
                                     month,
                                     style: AppText.poppins(
                                       color: const Color(0xFF2C3E50),
-                                      fontSize: 20,
+                                      fontSize: ResponsiveHelper.fontSize(
+                                          context,
+                                          mobile: 20),
                                       fontWeight: FontWeight.bold,
                                       shadows: [
                                         Shadow(
@@ -338,7 +356,7 @@ class _HistoryPageState extends State<HistoryPage> {
       onTap: () => _showTransactionDetails(transaction),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(18),
+        padding: ResponsiveHelper.cardPadding(context),
         decoration: BoxDecoration(
           color: const Color(0xFFE0E5EC),
           borderRadius: BorderRadius.circular(16),
@@ -359,6 +377,7 @@ class _HistoryPageState extends State<HistoryPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
+              flex: 3,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -366,39 +385,53 @@ class _HistoryPageState extends State<HistoryPage> {
                     transaction.recipientName,
                     style: AppText.poppins(
                       color: const Color(0xFF2C3E50),
-                      fontSize: 16,
+                      fontSize: ResponsiveHelper.fontSize(context, mobile: 16),
                       fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${transaction.transactionType} - ${dateFormat.format(transaction.createdAt)}',
                     style: AppText.poppins(
                       color: const Color(0xFF64B5F6),
-                      fontSize: 12,
+                      fontSize: ResponsiveHelper.fontSize(context, mobile: 12),
                       fontWeight: FontWeight.w400,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: (isCashIn
+            const SizedBox(width: 8),
+            Flexible(
+              flex: 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: (isCashIn
+                          ? const Color(0xFF4CAF50)
+                          : const Color(0xFFF44336))
+                      .withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${isCashIn ? '+' : '-'}${currencyFormat.format(transaction.totalAmount)}',
+                  style: AppText.poppins(
+                    color: isCashIn
                         ? const Color(0xFF4CAF50)
-                        : const Color(0xFFF44336))
-                    .withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '${isCashIn ? '+' : '-'}${currencyFormat.format(transaction.totalAmount)}',
-                style: AppText.poppins(
-                  color: isCashIn
-                      ? const Color(0xFF4CAF50)
-                      : const Color(0xFFF44336),
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
+                        : const Color(0xFFF44336),
+                    fontSize: ResponsiveHelper.fontSize(context, mobile: 15),
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.end,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
@@ -441,7 +474,7 @@ class _HistoryPageState extends State<HistoryPage> {
               'Transaction Details',
               style: AppText.poppins(
                 color: const Color(0xFF2C3E50),
-                fontSize: 20,
+                fontSize: ResponsiveHelper.fontSize(context, mobile: 20),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -506,7 +539,11 @@ class _HistoryPageState extends State<HistoryPage> {
               color: const Color(0xFF64B5F6).withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: const Color(0xFF64B5F6), size: 20),
+            child: Icon(
+              icon,
+              color: const Color(0xFF64B5F6),
+              size: ResponsiveHelper.iconSize(context, base: 20),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -517,7 +554,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   label,
                   style: AppText.poppins(
                     color: const Color(0xFF64B5F6),
-                    fontSize: 12,
+                    fontSize: ResponsiveHelper.fontSize(context, mobile: 12),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -526,9 +563,11 @@ class _HistoryPageState extends State<HistoryPage> {
                   value,
                   style: AppText.poppins(
                     color: const Color(0xFF2C3E50),
-                    fontSize: 15,
+                    fontSize: ResponsiveHelper.fontSize(context, mobile: 15),
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

@@ -8,10 +8,15 @@ class DashboardController extends GetxController {
 
   var totalCashIn = 0.0.obs;
   var totalCashOut = 0.0.obs;
+  var totalLoad = 0.0.obs; // Total load transactions
   var totalFees = 0.0.obs;
+  var totalSeparateFees = 0.0.obs; // Fees paid separately
+  var availableFunds = 0.0.obs;
   var totalTransactions = 0.obs;
   var recentTransactions = <TransactionModel>[].obs;
   var sourceBreakdown = <String, double>{}.obs;
+  var feeBreakdown = <String, double>{}.obs;
+  var separateFeeBreakdown = <String, double>{}.obs; // Separate fees by source
   var isLoading = false.obs;
   var selectedPeriod = 'Daily'.obs;
 
@@ -85,10 +90,21 @@ class DashboardController extends GetxController {
       totalCashIn.value = stats['totalCashIn'] ?? 0.0;
       totalCashOut.value = stats['totalCashOut'] ?? 0.0;
       totalFees.value = stats['totalFees'] ?? 0.0;
+      availableFunds.value = stats['availableFunds'] ?? 0.0;
       totalTransactions.value = stats['totalTransactions'] ?? 0;
       recentTransactions.value = stats['recentTransactions'] ?? [];
       sourceBreakdown.value =
           Map<String, double>.from(stats['sourceBreakdown'] ?? {});
+
+      // Calculate fee breakdown by source from all transactions
+      final allTransactions =
+          await _transactionService.getUserTransactions(userId, limit: 10000);
+      Map<String, double> fees = {};
+      for (var transaction in allTransactions) {
+        fees[transaction.source] =
+            (fees[transaction.source] ?? 0) + transaction.fee;
+      }
+      feeBreakdown.value = fees;
 
       isLoading.value = false;
     } catch (e) {
@@ -102,27 +118,57 @@ class DashboardController extends GetxController {
       // Recalculate stats from transactions
       double cashIn = 0;
       double cashOut = 0;
+      double load = 0;
       double fees = 0;
+      double separateFees = 0;
+      double available = 0;
       Map<String, double> sources = {};
+      Map<String, double> feesBySource = {};
+      Map<String, double> separateFeesBySource = {};
 
       for (var transaction in transactions) {
+        // Track load transactions separately
+        if (transaction.source == 'Load') {
+          load += transaction.amount + transaction.separateFee;
+        }
+
         if (transaction.transactionType == 'Cash In') {
           cashIn += transaction.amount;
+          available += transaction.amount;
         } else {
           cashOut += transaction.amount;
+          available -= transaction.amount;
+          // Deduct fees only from Cash Out transactions
+          available -= transaction.fee;
         }
         fees += transaction.fee;
+        separateFees += transaction.separateFee;
 
         sources[transaction.source] =
             (sources[transaction.source] ?? 0) + transaction.amount;
+        feesBySource[transaction.source] =
+            (feesBySource[transaction.source] ?? 0) + transaction.fee;
+        separateFeesBySource[transaction.source] =
+            (separateFeesBySource[transaction.source] ?? 0) +
+                transaction.separateFee;
+      }
+
+      // Ensure available funds is never negative
+      if (available < 0) {
+        available = 0;
       }
 
       totalCashIn.value = cashIn;
       totalCashOut.value = cashOut;
+      totalLoad.value = load;
       totalFees.value = fees;
+      totalSeparateFees.value = separateFees;
+      availableFunds.value = available;
       totalTransactions.value = transactions.length;
       recentTransactions.value = transactions.take(10).toList();
       sourceBreakdown.value = sources;
+      feeBreakdown.value = feesBySource;
+      separateFeeBreakdown.value = separateFeesBySource;
     });
   }
 }

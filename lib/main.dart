@@ -35,11 +35,17 @@ class MyApp extends StatelessWidget {
         darkTheme: AppTheme.dark(),
         themeMode: themeController.themeMode.value,
         builder: (context, child) {
-          return Stack(
-            children: [
-              child ?? const SizedBox.shrink(),
-              const GlobalLoadingOverlay(),
-            ],
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaleFactor:
+                  1.0, // Force text scale to 1.0, ignoring device settings
+            ),
+            child: Stack(
+              children: [
+                child ?? const SizedBox.shrink(),
+                const GlobalLoadingOverlay(),
+              ],
+            ),
           );
         },
         home: const AuthWrapper(),

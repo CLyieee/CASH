@@ -1,6 +1,9 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:g/utils/responsive_helper.dart';
 import '../controllers/app_controller.dart';
 import '../services/transaction_service.dart';
 import '../services/report_service.dart';
@@ -39,9 +42,11 @@ class _ReportsPageState extends State<ReportsPage> {
         Get.snackbar(
           'No Data',
           'No transactions found for this period',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.orange,
-          colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Theme.of(context).colorScheme.errorContainer,
+          colorText: Theme.of(context).colorScheme.onErrorContainer,
+          margin: const EdgeInsets.all(20),
+          borderRadius: 16,
         );
         return;
       }
@@ -49,28 +54,66 @@ class _ReportsPageState extends State<ReportsPage> {
       // Get date range
       final dateRange = _reportService.getDateRangeForPeriod(period);
 
-      // Export report
-      await _reportService.exportReport(
+      // Export report - let user choose location
+      final savedPath = await _reportService.exportReport(
         filteredTransactions,
         period,
         dateRange['start']!,
         dateRange['end']!,
       );
 
-      Get.snackbar(
-        'Success',
-        'Report generated successfully!',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+      if (savedPath != null) {
+        // Successfully saved
+        final fileName =
+            kIsWeb ? savedPath : savedPath.split(Platform.pathSeparator).last;
+
+        String message;
+        if (kIsWeb) {
+          message = 'Report downloaded: $fileName';
+        } else {
+          try {
+            final isMobile = Platform.isAndroid || Platform.isIOS;
+            message = isMobile
+                ? 'Report generated: $fileName\nShare dialog opened'
+                : 'Report saved: $fileName';
+          } catch (e) {
+            message = 'Report saved: $fileName';
+          }
+        }
+
+        Get.snackbar(
+          'Success',
+          message,
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          colorText: Theme.of(context).colorScheme.onPrimaryContainer,
+          margin: const EdgeInsets.all(20),
+          borderRadius: 16,
+          duration: const Duration(seconds: 4),
+        );
+      } else {
+        // User cancelled
+        Get.snackbar(
+          'Cancelled',
+          'Export cancelled by user',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor:
+              Theme.of(context).colorScheme.surfaceContainerHighest,
+          colorText: Theme.of(context).colorScheme.onSurface,
+          margin: const EdgeInsets.all(20),
+          borderRadius: 16,
+        );
+      }
     } catch (e) {
       Get.snackbar(
         'Error',
         'Failed to generate report: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Theme.of(context).colorScheme.errorContainer,
+        colorText: Theme.of(context).colorScheme.onErrorContainer,
+        margin: const EdgeInsets.all(20),
+        borderRadius: 16,
+        duration: const Duration(seconds: 4),
       );
     } finally {
       setState(() => _isGenerating = false);
@@ -80,38 +123,28 @@ class _ReportsPageState extends State<ReportsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final cardSurface = isDark ? const Color(0xFF1C2128) : Colors.white;
-    final cardBorder = isDark
-        ? Colors.white.withOpacity(0.08)
-        : Colors.black.withOpacity(0.06);
-    final textPrimary =
-        isDark ? const Color(0xFFE6EDF3) : const Color(0xFF1F2937);
-    final textSecondary =
-        isDark ? const Color(0xFF8B949E) : const Color(0xFF6B7280);
-    final accentBlue = theme.colorScheme.primary;
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: cardSurface,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Get.back(),
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
-              color: textPrimary, size: 20),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: colorScheme.onSurface,
+            size: 20,
+          ),
         ),
         title: Text(
           'Export Reports',
           style: AppText.poppins(
-            color: textPrimary,
+            color: colorScheme.onSurface,
             fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: cardBorder),
         ),
       ),
       body: Stack(
@@ -123,19 +156,22 @@ class _ReportsPageState extends State<ReportsPage> {
               children: [
                 // Header
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [accentBlue, accentBlue.withOpacity(0.8)],
+                      colors: [
+                        colorScheme.primary,
+                        colorScheme.primary.withOpacity(0.8)
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: accentBlue.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+                        color: colorScheme.primary.withOpacity(0.3),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
@@ -147,8 +183,11 @@ class _ReportsPageState extends State<ReportsPage> {
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.file_download,
-                            color: Colors.white, size: 28),
+                        child: const Icon(
+                          Icons.file_download_rounded,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -183,7 +222,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 Text(
                   'Select Report Period',
                   style: AppText.poppins(
-                    color: textPrimary,
+                    color: colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -192,7 +231,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 Text(
                   'Choose the time period for your report',
                   style: AppText.poppins(
-                    color: textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                     fontSize: 13,
                   ),
                 ),
@@ -201,73 +240,66 @@ class _ReportsPageState extends State<ReportsPage> {
 
                 // Report Cards
                 _buildReportCard(
+                  colorScheme,
                   'Daily Report',
                   'Today\'s transactions',
-                  Icons.today,
+                  Icons.today_rounded,
                   const Color(0xFF4CAF50),
                   () => _generateReport(ReportPeriod.daily),
-                  cardSurface,
-                  cardBorder,
-                  textPrimary,
-                  textSecondary,
                 ),
 
                 const SizedBox(height: 12),
 
                 _buildReportCard(
+                  colorScheme,
                   'Weekly Report',
                   'This week\'s transactions',
-                  Icons.calendar_view_week,
+                  Icons.calendar_view_week_rounded,
                   const Color(0xFF2196F3),
                   () => _generateReport(ReportPeriod.weekly),
-                  cardSurface,
-                  cardBorder,
-                  textPrimary,
-                  textSecondary,
                 ),
 
                 const SizedBox(height: 12),
 
                 _buildReportCard(
+                  colorScheme,
                   'Monthly Report',
                   'This month\'s transactions',
-                  Icons.calendar_month,
+                  Icons.calendar_month_rounded,
                   const Color(0xFF9C27B0),
                   () => _generateReport(ReportPeriod.monthly),
-                  cardSurface,
-                  cardBorder,
-                  textPrimary,
-                  textSecondary,
                 ),
 
                 const SizedBox(height: 12),
 
                 _buildReportCard(
+                  colorScheme,
                   'Yearly Report',
                   'This year\'s transactions',
-                  Icons.calendar_today,
+                  Icons.calendar_today_rounded,
                   const Color(0xFFFF9800),
                   () => _generateReport(ReportPeriod.yearly),
-                  cardSurface,
-                  cardBorder,
-                  textPrimary,
-                  textSecondary,
                 ),
 
                 const SizedBox(height: 24),
 
                 // Info Card
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: accentBlue.withOpacity(0.1),
+                    color: colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: accentBlue.withOpacity(0.3)),
+                    border:
+                        Border.all(color: colorScheme.primary.withOpacity(0.3)),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.info_outline, color: accentBlue, size: 20),
+                      Icon(
+                        Icons.info_outline_rounded,
+                        color: colorScheme.onPrimaryContainer,
+                        size: 20,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -276,7 +308,7 @@ class _ReportsPageState extends State<ReportsPage> {
                             Text(
                               'About Reports',
                               style: AppText.poppins(
-                                color: accentBlue,
+                                color: colorScheme.onPrimaryContainer,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -285,7 +317,7 @@ class _ReportsPageState extends State<ReportsPage> {
                             Text(
                               'Reports are generated in CSV format and include all transaction details, summaries, and statistics. You can open them in Excel, Google Sheets, or any spreadsheet application.',
                               style: AppText.poppins(
-                                color: textSecondary,
+                                color: colorScheme.onPrimaryContainer,
                                 fontSize: 12,
                                 height: 1.5,
                               ),
@@ -308,18 +340,18 @@ class _ReportsPageState extends State<ReportsPage> {
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: cardSurface,
+                    color: colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(color: accentBlue),
+                      CircularProgressIndicator(color: colorScheme.primary),
                       const SizedBox(height: 16),
                       Text(
                         'Generating Report...',
                         style: AppText.poppins(
-                          color: textPrimary,
+                          color: colorScheme.onSurface,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -335,15 +367,12 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _buildReportCard(
+    ColorScheme colorScheme,
     String title,
     String subtitle,
     IconData icon,
     Color color,
     VoidCallback onTap,
-    Color cardSurface,
-    Color cardBorder,
-    Color textPrimary,
-    Color textSecondary,
   ) {
     return Material(
       color: Colors.transparent,
@@ -351,11 +380,11 @@ class _ReportsPageState extends State<ReportsPage> {
         onTap: _isGenerating ? null : onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: cardSurface,
+            color: colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: cardBorder),
+            border: Border.all(color: colorScheme.outlineVariant),
           ),
           child: Row(
             children: [
@@ -365,7 +394,11 @@ class _ReportsPageState extends State<ReportsPage> {
                   color: color.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -375,23 +408,27 @@ class _ReportsPageState extends State<ReportsPage> {
                     Text(
                       title,
                       style: AppText.poppins(
-                        color: textPrimary,
+                        color: colorScheme.onSurface,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: AppText.poppins(
-                        color: textSecondary,
+                        color: colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, color: textSecondary, size: 16),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: colorScheme.onSurfaceVariant,
+                size: 16,
+              ),
             ],
           ),
         ),

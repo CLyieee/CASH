@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:g/utils/responsive_helper.dart';
 import '../controllers/app_controller.dart';
 import '../models/transaction_model.dart';
 import '../services/transaction_service.dart';
@@ -101,14 +102,17 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Get.back(),
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
-              color: textPrimary, size: 20),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: textPrimary,
+            size: ResponsiveHelper.iconSize(context, base: 20),
+          ),
         ),
         title: Text(
           'Transaction Calendar',
           style: AppText.poppins(
             color: textPrimary,
-            fontSize: 20,
+            fontSize: ResponsiveHelper.fontSize(context, mobile: 20),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -126,7 +130,8 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
                 children: [
                   // Calendar
                   Container(
-                    margin: const EdgeInsets.all(16),
+                    margin: EdgeInsets.all(
+                        ResponsiveHelper.horizontalPadding(context)),
                     decoration: BoxDecoration(
                       color: cardSurface,
                       borderRadius: BorderRadius.circular(20),
@@ -164,6 +169,12 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
 
   Widget _buildMonthHeader(
       Color textPrimary, Color textSecondary, Color accentBlue) {
+    // Filter transactions for the focused month
+    final monthTransactions = _allTransactions.where((tx) {
+      return tx.date.year == _focusedMonth.year &&
+          tx.date.month == _focusedMonth.month;
+    }).length;
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -179,16 +190,16 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
                 DateFormat('MMMM yyyy').format(_focusedMonth),
                 style: AppText.poppins(
                   color: textPrimary,
-                  fontSize: 18,
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 18),
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                '${_allTransactions.length} total transactions',
+                '$monthTransactions total transactions',
                 style: AppText.poppins(
                   color: textSecondary,
-                  fontSize: 12,
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 12),
                 ),
               ),
             ],
@@ -216,7 +227,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
                 day,
                 style: AppText.poppins(
                   color: textSecondary,
-                  fontSize: 12,
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 12),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -317,7 +328,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
                 '$day',
                 style: AppText.poppins(
                   color: isSelected ? Colors.white : textPrimary,
-                  fontSize: 14,
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 14),
                   fontWeight:
                       isToday || isSelected ? FontWeight.w600 : FontWeight.w400,
                 ),
@@ -365,7 +376,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
             children: [
               Icon(
                 Icons.calendar_today_outlined,
-                size: 64,
+                size: ResponsiveHelper.iconSize(context, base: 64),
                 color: textSecondary.withOpacity(0.5),
               ),
               const SizedBox(height: 16),
@@ -373,7 +384,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
                 'No transactions',
                 style: AppText.poppins(
                   color: textSecondary,
-                  fontSize: 16,
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 16),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -382,7 +393,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
                 DateFormat('MMM dd, yyyy').format(_selectedDate),
                 style: AppText.poppins(
                   color: textSecondary.withOpacity(0.7),
-                  fontSize: 14,
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 14),
                 ),
               ),
             ],
@@ -406,8 +417,10 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
       children: [
         // Summary Card
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.all(16),
+          margin: EdgeInsets.symmetric(
+            horizontal: ResponsiveHelper.horizontalPadding(context),
+          ),
+          padding: ResponsiveHelper.cardPadding(context),
           decoration: BoxDecoration(
             color: cardSurface,
             borderRadius: BorderRadius.circular(16),
@@ -420,7 +433,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
                 DateFormat('EEEE, MMM dd, yyyy').format(_selectedDate),
                 style: AppText.poppins(
                   color: textPrimary,
-                  fontSize: 16,
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 16),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -454,7 +467,12 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
 
         // Transactions List
         ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          padding: EdgeInsets.fromLTRB(
+            ResponsiveHelper.horizontalPadding(context),
+            0,
+            ResponsiveHelper.horizontalPadding(context),
+            ResponsiveHelper.horizontalPadding(context),
+          ),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: transactions.length,
@@ -490,7 +508,11 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
               color: color,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: Colors.white, size: 14),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: ResponsiveHelper.iconSize(context, base: 14),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -501,7 +523,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
                   label,
                   style: AppText.poppins(
                     color: color,
-                    fontSize: 11,
+                    fontSize: ResponsiveHelper.fontSize(context, mobile: 11),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -510,7 +532,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
                   amount,
                   style: AppText.poppins(
                     color: color,
-                    fontSize: 13,
+                    fontSize: ResponsiveHelper.fontSize(context, mobile: 13),
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
@@ -537,7 +559,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: ResponsiveHelper.cardPadding(context),
       decoration: BoxDecoration(
         color: cardSurface,
         borderRadius: BorderRadius.circular(16),
@@ -554,7 +576,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
             child: Icon(
               isCashIn ? Icons.arrow_downward : Icons.arrow_upward,
               color: color,
-              size: 20,
+              size: ResponsiveHelper.iconSize(context, base: 20),
             ),
           ),
           const SizedBox(width: 14),
@@ -566,7 +588,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
                   transaction.recipientName,
                   style: AppText.poppins(
                     color: textPrimary,
-                    fontSize: 15,
+                    fontSize: ResponsiveHelper.fontSize(context, mobile: 15),
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
@@ -577,7 +599,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
                   DateFormat('hh:mm a').format(transaction.date),
                   style: AppText.poppins(
                     color: textSecondary,
-                    fontSize: 12,
+                    fontSize: ResponsiveHelper.fontSize(context, mobile: 12),
                   ),
                 ),
               ],
@@ -590,7 +612,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
                 '${isCashIn ? '+' : '-'}${currencyFormat.format(isCashIn ? transaction.amount : transaction.totalAmount)}',
                 style: AppText.poppins(
                   color: color,
-                  fontSize: 15,
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 15),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -599,7 +621,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
                   'Fee: ${currencyFormat.format(transaction.fee)}',
                   style: AppText.poppins(
                     color: textSecondary,
-                    fontSize: 11,
+                    fontSize: ResponsiveHelper.fontSize(context, mobile: 11),
                   ),
                 ),
             ],

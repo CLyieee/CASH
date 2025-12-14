@@ -7,6 +7,7 @@ class AppController extends GetxController {
 
   var userName = ''.obs;
   var phoneNumber = ''.obs;
+  var photoUrl = ''.obs;
   var pin = ''.obs;
   var isLoading = false.obs;
   var currentUserId = ''.obs;
@@ -29,6 +30,7 @@ class AppController extends GetxController {
       if (user != null) {
         userName.value = user.name;
         phoneNumber.value = user.phoneNumber ?? '';
+        photoUrl.value = user.photoUrl ?? '';
         pin.value = user.pin ?? '';
 
         if (user.feeRanges.isNotEmpty) {
@@ -53,6 +55,7 @@ class AppController extends GetxController {
         uid: currentUserId.value,
         name: userName.value,
         phoneNumber: phoneNumber.value.isNotEmpty ? phoneNumber.value : null,
+        photoUrl: photoUrl.value.isNotEmpty ? photoUrl.value : null,
         pin: pin.value.isNotEmpty ? pin.value : null,
         createdAt: DateTime.now(),
         lastLogin: DateTime.now(),
@@ -79,6 +82,13 @@ class AppController extends GetxController {
     phoneNumber.value = phone;
     if (currentUserId.value.isNotEmpty) {
       _firestoreService.updateUserPhone(currentUserId.value, phone);
+    }
+  }
+
+  void setPhotoUrl(String url) {
+    photoUrl.value = url;
+    if (currentUserId.value.isNotEmpty) {
+      _firestoreService.updateUserPhotoUrl(currentUserId.value, url);
     }
   }
 

@@ -1,0 +1,50 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="#4CAF50" opacity="0.1"/>
+  
+  <!-- Main Circle Background -->
+  <circle cx="256" cy="256" r="200" fill="#4CAF50"/>
+  
+  <!-- Receipt/Document Icon -->
+  <g transform="translate(256, 256)">
+    <!-- Receipt Paper -->
+    <rect x="-80" y="-100" width="160" height="200" rx="8" fill="#FFFFFF" stroke="#2E7D32" stroke-width="4"/>
+    
+    <!-- Receipt Lines -->
+    <line x1="-60" y1="-60" x2="60" y2="-60" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
+    <line x1="-60" y1="-20" x2="60" y2="-20" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
+    <line x1="-60" y1="20" x2="60" y2="20" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
+    <line x1="-60" y1="60" x2="40" y2="60" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
+    
+    <!-- Money Symbol (₱) -->
+    <text x="0" y="-30" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#2E7D32" text-anchor="middle">₱</text>
+    
+    <!-- Amount -->
+    <text x="0" y="20" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#2E7D32" text-anchor="middle">1,000</text>
+    
+    <!-- Scan Lines Effect (Top Right) -->
+    <g transform="translate(70, -80)">
+      <line x1="0" y1="0" x2="30" y2="0" stroke="#FFC107" stroke-width="4" stroke-linecap="round"/>
+      <line x1="0" y1="0" x2="0" y2="30" stroke="#FFC107" stroke-width="4" stroke-linecap="round"/>
+      <line x1="30" y1="0" x2="30" y2="30" stroke="#FFC107" stroke-width="4" stroke-linecap="round"/>
+      <line x1="0" y1="30" x2="30" y2="30" stroke="#FFC107" stroke-width="4" stroke-linecap="round"/>
+      <!-- Corner indicators -->
+      <line x1="0" y1="0" x2="15" y2="0" stroke="#FFC107" stroke-width="6" stroke-linecap="round"/>
+      <line x1="0" y1="0" x2="0" y2="15" stroke="#FFC107" stroke-width="6" stroke-linecap="round"/>
+      <line x1="30" y1="0" x2="15" y2="0" stroke="#FFC107" stroke-width="6" stroke-linecap="round"/>
+      <line x1="30" y1="0" x2="30" y2="15" stroke="#FFC107" stroke-width="6" stroke-linecap="round"/>
+      <line x1="0" y1="30" x2="15" y2="30" stroke="#FFC107" stroke-width="6" stroke-linecap="round"/>
+      <line x1="0" y1="30" x2="0" y2="15" stroke="#FFC107" stroke-width="6" stroke-linecap="round"/>
+      <line x1="30" y1="30" x2="15" y2="30" stroke="#FFC107" stroke-width="6" stroke-linecap="round"/>
+      <line x1="30" y1="30" x2="30" y2="15" stroke="#FFC107" stroke-width="6" stroke-linecap="round"/>
+    </g>
+  </g>
+  
+  <!-- App Name Text (Optional - can be removed for icon) -->
+  <!-- Uncomment below if you want text in the logo -->
+  <!--
+  <text x="256" y="420" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#2E7D32" text-anchor="middle">Instalog</text>
+  -->
+</svg>
+
+

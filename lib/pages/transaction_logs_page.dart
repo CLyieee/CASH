@@ -3,6 +3,7 @@ import 'package:g/utils/app_text.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:g/utils/responsive_helper.dart';
 import '../controllers/app_controller.dart';
 import '../services/transaction_service.dart';
 import '../models/transaction_model.dart';
@@ -10,34 +11,115 @@ import '../models/transaction_model.dart';
 class _TransactionLogsPalette {
   _TransactionLogsPalette(ThemeData theme)
       : isDark = theme.brightness == Brightness.dark,
+        // M3 Surface colors
         background = theme.brightness == Brightness.dark
-            ? const Color(0xFF0F1419)
-            : const Color(0xFFF8F9FA),
+            ? const Color(0xFF0D1117)
+            : const Color(0xFFFCFCFF),
+        surfaceContainer = theme.brightness == Brightness.dark
+            ? const Color(0xFF1C2128)
+            : const Color(0xFFF3F3F6),
+        surfaceContainerHigh = theme.brightness == Brightness.dark
+            ? const Color(0xFF262C36)
+            : const Color(0xFFEAEAED),
+        containerHigh = theme.brightness == Brightness.dark
+            ? const Color(0xFF262C36)
+            : const Color(0xFFEAEAED),
         cardSurface = theme.brightness == Brightness.dark
             ? const Color(0xFF1C2128)
             : Colors.white,
         cardBorder = theme.brightness == Brightness.dark
-            ? Colors.white.withOpacity(0.08)
-            : Colors.black.withOpacity(0.06),
-        textPrimary = theme.brightness == Brightness.dark
-            ? const Color(0xFFE6EDF3)
-            : const Color(0xFF1F2937),
+            ? Colors.white.withOpacity(0.06)
+            : Colors.black.withOpacity(0.04),
+        // M3 Text colors
+        textPrimary = theme.colorScheme.onSurface,
         textSecondary = theme.brightness == Brightness.dark
-            ? const Color(0xFF8B949E)
+            ? const Color(0xFF9CA3AF)
             : const Color(0xFF6B7280),
-        accentBlue = theme.colorScheme.primary,
-        accentGreen = const Color(0xFF10B981),
-        accentRed = const Color(0xFFEF4444);
+        textTertiary = theme.brightness == Brightness.dark
+            ? const Color(0xFF6B7280)
+            : const Color(0xFF9CA3AF),
+        // M3 On-surface colors
+        onSurface = theme.colorScheme.onSurface,
+        onSurfaceVariant = theme.brightness == Brightness.dark
+            ? const Color(0xFF9CA3AF)
+            : const Color(0xFF6B7280),
+        // M3 Outline colors
+        outline = theme.brightness == Brightness.dark
+            ? const Color(0xFF4B5563)
+            : const Color(0xFFD1D5DB),
+        outlineVariant = theme.brightness == Brightness.dark
+            ? const Color(0xFF374151)
+            : const Color(0xFFE5E7EB),
+        // M3 Primary tonal palette
+        primary = theme.brightness == Brightness.dark
+            ? const Color(0xFF93C5FD)
+            : const Color(0xFF2563EB),
+        primaryContainer = theme.brightness == Brightness.dark
+            ? const Color(0xFF1E3A5F)
+            : const Color(0xFFDBEAFE),
+        onPrimaryContainer = theme.brightness == Brightness.dark
+            ? const Color(0xFFDBEAFE)
+            : const Color(0xFF1E3A5F),
+        // Legacy accent colors (for compatibility)
+        accentBlue = theme.brightness == Brightness.dark
+            ? const Color(0xFF93C5FD)
+            : const Color(0xFF2563EB),
+        accentGreen = theme.brightness == Brightness.dark
+            ? const Color(0xFF86EFAC)
+            : const Color(0xFF16A34A),
+        accentRed = theme.brightness == Brightness.dark
+            ? const Color(0xFFFCA5A5)
+            : const Color(0xFFDC2626),
+        // M3 Semantic colors
+        success = theme.brightness == Brightness.dark
+            ? const Color(0xFF86EFAC)
+            : const Color(0xFF16A34A),
+        successContainer = theme.brightness == Brightness.dark
+            ? const Color(0xFF14532D)
+            : const Color(0xFFDCFCE7),
+        error = theme.brightness == Brightness.dark
+            ? const Color(0xFFFCA5A5)
+            : const Color(0xFFDC2626),
+        onError = theme.brightness == Brightness.dark
+            ? const Color(0xFF7F1D1D)
+            : Colors.white,
+        errorContainer = theme.brightness == Brightness.dark
+            ? const Color(0xFF7F1D1D)
+            : const Color(0xFFFEE2E2),
+        warning = theme.brightness == Brightness.dark
+            ? const Color(0xFFFBBF24)
+            : const Color(0xFFD97706),
+        warningContainer = theme.brightness == Brightness.dark
+            ? const Color(0xFF78350F)
+            : const Color(0xFFFEF3C7);
 
   final bool isDark;
   final Color background;
+  final Color surfaceContainer;
+  final Color surfaceContainerHigh;
+  final Color containerHigh;
   final Color cardSurface;
   final Color cardBorder;
   final Color textPrimary;
   final Color textSecondary;
+  final Color textTertiary;
+  final Color onSurface;
+  final Color onSurfaceVariant;
+  final Color outline;
+  final Color outlineVariant;
+  final Color primary;
+  final Color primaryContainer;
+  final Color onPrimaryContainer;
   final Color accentBlue;
   final Color accentGreen;
   final Color accentRed;
+  final Color success;
+  final Color successContainer;
+  final Color error;
+  final Color onError;
+  final Color errorContainer;
+  final Color warning;
+  final Color warningContainer;
 }
 
 class TransactionLogsPage extends StatefulWidget {
@@ -103,9 +185,14 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
 
     // Apply filter
     if (_selectedFilter != 'All') {
-      transactions = transactions
-          .where((t) => t.transactionType == _selectedFilter)
-          .toList();
+      // Special handling for Load - filter by source
+      if (_selectedFilter == 'Load') {
+        transactions = transactions.where((t) => t.source == 'Load').toList();
+      } else {
+        transactions = transactions
+            .where((t) => t.transactionType == _selectedFilter)
+            .toList();
+      }
     }
 
     // Apply search
@@ -151,51 +238,55 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = _TransactionLogsPalette(theme);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 360;
+    final isSmall = screenWidth < 400;
 
     return Scaffold(
       backgroundColor: palette.background,
       body: SafeArea(
         child: Column(
           children: [
-            // Modern Header
+            // M3 Header with surfaceContainer background
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+              padding: EdgeInsets.fromLTRB(
+                isCompact ? 12 : (isSmall ? 16 : 20),
+                isCompact ? 12 : 16,
+                isCompact ? 12 : (isSmall ? 16 : 20),
+                isCompact ? 12 : 16,
+              ),
               decoration: BoxDecoration(
-                color: palette.cardSurface,
-                border: Border(
-                  bottom: BorderSide(
-                    color: palette.cardBorder,
-                    width: 1,
-                  ),
+                color: palette.surfaceContainer,
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(24),
                 ),
               ),
               child: Column(
                 children: [
                   Row(
                     children: [
+                      // M3 Back button
                       Material(
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: () => Get.back(),
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: EdgeInsets.all(isCompact ? 8 : 10),
                             decoration: BoxDecoration(
                               color: palette.cardSurface,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: palette.cardBorder,
-                              ),
+                              border: Border.all(color: palette.cardBorder),
                             ),
                             child: Icon(
                               Icons.arrow_back_ios_new_rounded,
                               color: palette.textPrimary,
-                              size: 20,
+                              size: isCompact ? 18 : 20,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: isCompact ? 12 : 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,7 +295,7 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
                               'Transaction History',
                               style: AppText.poppins(
                                 color: palette.textPrimary,
-                                fontSize: 22,
+                                fontSize: isCompact ? 18 : (isSmall ? 20 : 22),
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: -0.5,
                               ),
@@ -213,11 +304,31 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
                               '${filteredTransactions.length} transactions',
                               style: AppText.poppins(
                                 color: palette.textSecondary,
-                                fontSize: 13,
+                                fontSize: isCompact ? 11 : (isSmall ? 12 : 13),
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                      // M3 Sort button
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _showSortOptions(palette),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: EdgeInsets.all(isCompact ? 8 : 10),
+                            decoration: BoxDecoration(
+                              color: palette.primaryContainer,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.sort_rounded,
+                              color: palette.onPrimaryContainer,
+                              size: isCompact ? 18 : 20,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -226,122 +337,81 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
                       .fadeIn(duration: 400.ms)
                       .slideY(begin: -0.2, end: 0),
 
-                  const SizedBox(height: 16),
+                  SizedBox(height: isCompact ? 12 : 16),
 
-                  // Filter Chips
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildFilterChip('All', palette),
-                        const SizedBox(width: 10),
-                        _buildFilterChip('Cash In', palette),
-                        const SizedBox(width: 10),
-                        _buildFilterChip('Cash Out', palette),
-                      ],
+                  // M3 Search Field
+                  Container(
+                    height: isCompact ? 44 : 48,
+                    decoration: BoxDecoration(
+                      color: palette.cardSurface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: palette.cardBorder),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      style: AppText.poppins(
+                        color: palette.textPrimary,
+                        fontSize: isCompact ? 13 : 14,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search transactions...',
+                        hintStyle: AppText.poppins(
+                          color: palette.textTertiary,
+                          fontSize: isCompact ? 13 : 14,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: palette.textSecondary,
+                          size: isCompact ? 18 : 20,
+                        ),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.clear_rounded,
+                                  color: palette.textSecondary,
+                                  size: isCompact ? 18 : 20,
+                                ),
+                                onPressed: () => _searchController.clear(),
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: isCompact ? 12 : 16,
+                          vertical: isCompact ? 10 : 12,
+                        ),
+                      ),
                     ),
                   )
                       .animate(delay: 100.ms)
                       .fadeIn(duration: 400.ms)
-                      .slideX(begin: -0.1, end: 0),
+                      .slideY(begin: 0.1, end: 0),
 
-                  const SizedBox(height: 16),
+                  SizedBox(height: isCompact ? 12 : 16),
 
-                  // Search and Sort Row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: palette.isDark
-                                ? palette.cardSurface.withOpacity(0.6)
-                                : palette.cardBorder.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: palette.cardBorder,
-                            ),
-                          ),
-                          child: TextField(
-                            controller: _searchController,
-                            style: AppText.poppins(
-                              color: palette.textPrimary,
-                              fontSize: 14,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'Search by name, number, or ref...',
-                              hintStyle: AppText.poppins(
-                                color: palette.textSecondary,
-                                fontSize: 14,
-                              ),
-                              prefixIcon: Icon(
-                                Icons.search_rounded,
-                                color: palette.textSecondary,
-                                size: 20,
-                              ),
-                              suffixIcon: _searchQuery.isNotEmpty
-                                  ? IconButton(
-                                      icon: Icon(
-                                        Icons.clear_rounded,
-                                        color: palette.textSecondary,
-                                        size: 20,
-                                      ),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                      },
-                                    )
-                                  : null,
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => _showSortOptions(palette),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            height: 48,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            decoration: BoxDecoration(
-                              color: palette.cardSurface,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: palette.cardBorder,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.sort_rounded,
-                                  color: palette.accentBlue,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Sort',
-                                  style: AppText.poppins(
-                                    color: palette.textPrimary,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  // M3 Filter Chips with pill style
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildM3FilterChip('All', Icons.list_rounded, palette),
+                        SizedBox(width: isCompact ? 6 : 8),
+                        _buildM3FilterChip(
+                            'Cash In', Icons.south_west_rounded, palette),
+                        SizedBox(width: isCompact ? 6 : 8),
+                        _buildM3FilterChip(
+                            'Cash Out', Icons.north_east_rounded, palette),
+                        SizedBox(width: isCompact ? 6 : 8),
+                        _buildM3FilterChip(
+                            'Load', Icons.phone_android_rounded, palette),
+                        SizedBox(width: isCompact ? 6 : 8),
+                        _buildM3FilterChip('Bank Transfer',
+                            Icons.account_balance_rounded, palette),
+                      ],
+                    ),
                   )
                       .animate(delay: 150.ms)
                       .fadeIn(duration: 400.ms)
-                      .slideX(begin: 0.1, end: 0),
+                      .slideX(begin: -0.1, end: 0),
                 ],
               ),
             ),
@@ -352,7 +422,7 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
                   ? Center(
                       child: CircularProgressIndicator(
                         valueColor:
-                            AlwaysStoppedAnimation<Color>(palette.accentBlue),
+                            AlwaysStoppedAnimation<Color>(palette.primary),
                       ),
                     )
                   : filteredTransactions.isEmpty
@@ -361,45 +431,51 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Container(
-                                width: 100,
-                                height: 100,
+                                width: ResponsiveHelper.iconSize(context,
+                                    base: 100),
+                                height: ResponsiveHelper.iconSize(context,
+                                    base: 100),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFE0E5EC),
+                                  color: palette.surfaceContainer,
                                   shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.white.withOpacity(0.8),
-                                      offset: const Offset(-6, -6),
-                                      blurRadius: 12,
-                                    ),
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      offset: const Offset(6, 6),
-                                      blurRadius: 12,
-                                    ),
-                                  ],
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.receipt_long_rounded,
-                                  color: Color(0xFF64B5F6),
-                                  size: 50,
+                                  color: palette.primary,
+                                  size: ResponsiveHelper.iconSize(context,
+                                      base: 50),
                                 ),
                               ),
                               const SizedBox(height: 20),
                               Text(
                                 'No transactions found',
                                 style: AppText.poppins(
-                                  color:
-                                      const Color(0xFF2C3E50).withOpacity(0.6),
-                                  fontSize: 16,
+                                  color: palette.onSurfaceVariant,
+                                  fontSize: ResponsiveHelper.fontSize(context,
+                                      mobile: 16),
                                   fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Transactions will appear here',
+                                style: AppText.poppins(
+                                  color: palette.outline,
+                                  fontSize: ResponsiveHelper.fontSize(context,
+                                      mobile: 13),
+                                  fontWeight: FontWeight.w400,
                                 ),
                               ),
                             ],
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                          padding: EdgeInsets.fromLTRB(
+                            ResponsiveHelper.horizontalPadding(context),
+                            ResponsiveHelper.verticalPadding(context) * 0.83,
+                            ResponsiveHelper.horizontalPadding(context),
+                            ResponsiveHelper.verticalPadding(context) * 0.83,
+                          ),
                           itemCount: filteredTransactions.length,
                           itemBuilder: (context, index) {
                             return _buildTransactionCard(
@@ -441,9 +517,63 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
             label,
             style: AppText.poppins(
               color: isSelected ? Colors.white : palette.textPrimary,
-              fontSize: 13,
+              fontSize: ResponsiveHelper.fontSize(context, mobile: 13),
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildM3FilterChip(
+      String label, IconData icon, _TransactionLogsPalette palette) {
+    final isSelected = _selectedFilter == label;
+    final isCompact = MediaQuery.of(context).size.width < 360;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedFilter = label;
+          });
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 12 : 16,
+            vertical: isCompact ? 8 : 10,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected ? palette.primaryContainer : palette.cardSurface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? palette.primary : palette.outline,
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: isCompact ? 14 : 16,
+                color: isSelected
+                    ? palette.onPrimaryContainer
+                    : palette.onSurfaceVariant,
+              ),
+              SizedBox(width: isCompact ? 4 : 6),
+              Text(
+                label,
+                style: AppText.poppins(
+                  color: isSelected
+                      ? palette.onPrimaryContainer
+                      : palette.onSurface,
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 12),
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -463,21 +593,17 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
+          padding: ResponsiveHelper.cardPadding(context),
           decoration: BoxDecoration(
-            color: palette.cardSurface,
+            color: palette.containerHigh,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: palette.cardBorder,
-              width: 1,
-            ),
           ),
           child: Row(
             children: [
               // Icon
               Container(
-                width: 48,
-                height: 48,
+                width: ResponsiveHelper.iconSize(context, base: 48),
+                height: ResponsiveHelper.iconSize(context, base: 48),
                 decoration: BoxDecoration(
                   color: (isCashIn ? palette.accentGreen : palette.accentRed)
                       .withOpacity(0.12),
@@ -488,7 +614,7 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
                       ? Icons.south_west_rounded
                       : Icons.north_east_rounded,
                   color: isCashIn ? palette.accentGreen : palette.accentRed,
-                  size: 24,
+                  size: ResponsiveHelper.iconSize(context, base: 24),
                 ),
               ),
               const SizedBox(width: 14),
@@ -530,7 +656,8 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
                             transaction.refNumber,
                             style: AppText.poppins(
                               color: palette.textSecondary,
-                              fontSize: 12,
+                              fontSize: ResponsiveHelper.fontSize(context,
+                                  mobile: 12),
                               fontWeight: FontWeight.w400,
                             ),
                             maxLines: 1,
@@ -540,18 +667,19 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
+                            horizontal: 10,
+                            vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: palette.accentGreen.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
+                            color: palette.accentGreen.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             'Completed',
                             style: AppText.poppins(
                               color: palette.accentGreen,
-                              fontSize: 10,
+                              fontSize: ResponsiveHelper.fontSize(context,
+                                  mobile: 10),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -563,7 +691,8 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
                       '${dateFormat.format(transaction.date)} • ${timeFormat.format(transaction.date)}',
                       style: AppText.poppins(
                         color: palette.textSecondary,
-                        fontSize: 11,
+                        fontSize:
+                            ResponsiveHelper.fontSize(context, mobile: 11),
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -584,130 +713,149 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
     final isCashIn = transaction.transactionType == 'Cash In';
 
     Get.bottomSheet(
-      Container(
-        decoration: BoxDecoration(
-          color: palette.cardSurface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: (isCashIn ? palette.accentGreen : palette.accentRed)
-                        .withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(
-                    isCashIn
-                        ? Icons.south_west_rounded
-                        : Icons.north_east_rounded,
-                    color: isCashIn ? palette.accentGreen : palette.accentRed,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        transaction.transactionType,
-                        style: AppText.poppins(
-                          color: palette.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: palette.accentGreen.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'Completed',
-                          style: AppText.poppins(
-                            color: palette.accentGreen,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 380;
+          return Container(
+            decoration: BoxDecoration(
+              color: palette.surfaceContainer,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(28)),
             ),
-
-            const SizedBox(height: 24),
-
-            Divider(color: palette.cardBorder),
-
-            const SizedBox(height: 16),
-
-            // Amount
-            _buildDetailRow(
-                'Amount', currencyFormat.format(transaction.amount), palette),
-            _buildDetailRow(
-                'Fee', currencyFormat.format(transaction.fee), palette),
-            _buildDetailRow('Total',
-                currencyFormat.format(transaction.totalAmount), palette),
-            _buildDetailRow('Ref Number', transaction.refNumber, palette),
-            _buildDetailRow('Source', transaction.source, palette),
-            _buildDetailRow(
-                'Date',
-                '${dateFormat.format(transaction.date)} • ${timeFormat.format(transaction.date)}',
-                palette),
-
-            const SizedBox(height: 24),
-
-            // Delete Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: palette.accentRed,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                onPressed: () {
-                  Get.back();
-                  _confirmDelete(transaction, palette);
-                },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+            padding: EdgeInsets.all(isNarrow ? 16 : 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
                   children: [
-                    const Icon(Icons.delete_outline,
-                        color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Delete Transaction',
-                      style: AppText.poppins(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                    Container(
+                      width: ResponsiveHelper.iconSize(context, base: 56),
+                      height: ResponsiveHelper.iconSize(context, base: 56),
+                      decoration: BoxDecoration(
+                        color:
+                            (isCashIn ? palette.accentGreen : palette.accentRed)
+                                .withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        isCashIn
+                            ? Icons.south_west_rounded
+                            : Icons.north_east_rounded,
+                        color:
+                            isCashIn ? palette.accentGreen : palette.accentRed,
+                        size: ResponsiveHelper.iconSize(context, base: 28),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            transaction.transactionType,
+                            style: AppText.poppins(
+                              color: palette.onSurface,
+                              fontSize: ResponsiveHelper.fontSize(context,
+                                  mobile: 18),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: palette.accentGreen.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Completed',
+                              style: AppText.poppins(
+                                color: palette.accentGreen,
+                                fontSize: ResponsiveHelper.fontSize(context,
+                                    mobile: 11),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
+
+                const SizedBox(height: 24),
+
+                Divider(color: palette.outlineVariant),
+
+                const SizedBox(height: 16),
+
+                // Amount
+                _buildDetailRow('Amount',
+                    currencyFormat.format(transaction.amount), palette),
+                _buildDetailRow(
+                    'Fee', currencyFormat.format(transaction.fee), palette),
+                _buildDetailRow('Total',
+                    currencyFormat.format(transaction.totalAmount), palette),
+                _buildDetailRow('Ref Number', transaction.refNumber, palette),
+                _buildDetailRow('Source', transaction.source, palette),
+                _buildDetailRow(
+                    'Date',
+                    '${dateFormat.format(transaction.date)} • ${timeFormat.format(transaction.date)}',
+                    palette),
+
+                const SizedBox(height: 24),
+
+                // M3 Delete Button - Tonal Error Style
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.tonal(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: palette.error.withOpacity(0.12),
+                      foregroundColor: palette.error,
+                      padding: EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: isNarrow ? 8 : 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () {
+                      Get.back();
+                      _confirmDelete(transaction, palette);
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.delete_outline_rounded,
+                          size: isNarrow ? 18 : 20,
+                        ),
+                        SizedBox(width: isNarrow ? 6 : 8),
+                        Flexible(
+                          child: Text(
+                            'Delete Transaction',
+                            style: AppText.poppins(
+                              fontSize: isNarrow ? 13 : 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
       isDismissible: true,
       enableDrag: true,
@@ -724,17 +872,18 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
           Text(
             label,
             style: AppText.poppins(
-              color: palette.textSecondary,
-              fontSize: 13,
+              color: palette.onSurfaceVariant,
+              fontSize: ResponsiveHelper.fontSize(context, mobile: 13),
               fontWeight: FontWeight.w500,
             ),
           ),
+          const SizedBox(width: 16),
           Flexible(
             child: Text(
               value,
               style: AppText.poppins(
-                color: palette.textPrimary,
-                fontSize: 13,
+                color: palette.onSurface,
+                fontSize: ResponsiveHelper.fontSize(context, mobile: 13),
                 fontWeight: FontWeight.w600,
               ),
               textAlign: TextAlign.end,
@@ -752,33 +901,33 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(28),
         ),
-        backgroundColor: palette.cardSurface,
+        backgroundColor: palette.surfaceContainer,
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: ResponsiveHelper.iconSize(context, base: 56),
+                height: ResponsiveHelper.iconSize(context, base: 56),
                 decoration: BoxDecoration(
-                  color: palette.accentRed.withOpacity(0.12),
+                  color: palette.error.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
-                  Icons.delete_outline,
-                  color: palette.accentRed,
-                  size: 28,
+                  Icons.delete_outline_rounded,
+                  color: palette.error,
+                  size: ResponsiveHelper.iconSize(context, base: 28),
                 ),
               ),
               const SizedBox(height: 20),
               Text(
                 'Delete Transaction?',
                 style: AppText.poppins(
-                  color: palette.textPrimary,
-                  fontSize: 18,
+                  color: palette.onSurface,
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 18),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -786,8 +935,8 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
               Text(
                 'This action cannot be undone. The transaction will be permanently removed.',
                 style: AppText.poppins(
-                  color: palette.textSecondary,
-                  fontSize: 13,
+                  color: palette.onSurfaceVariant,
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 13),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -795,20 +944,21 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
               Row(
                 children: [
                   Expanded(
-                    child: TextButton(
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        foregroundColor: palette.onSurface,
+                        side: BorderSide(color: palette.outline),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: palette.cardBorder),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
                       onPressed: () => Get.back(),
                       child: Text(
                         'Cancel',
                         style: AppText.poppins(
-                          color: palette.textPrimary,
-                          fontSize: 14,
+                          fontSize:
+                              ResponsiveHelper.fontSize(context, mobile: 14),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -816,14 +966,14 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: palette.accentRed,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: palette.error,
+                        foregroundColor: palette.onError,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        elevation: 0,
                       ),
                       onPressed: () async {
                         Get.back();
@@ -832,8 +982,8 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
                       child: Text(
                         'Delete',
                         style: AppText.poppins(
-                          color: Colors.white,
-                          fontSize: 14,
+                          fontSize:
+                              ResponsiveHelper.fontSize(context, mobile: 14),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -878,9 +1028,9 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
     Get.bottomSheet(
       Container(
         decoration: BoxDecoration(
-          color: palette.cardSurface,
+          color: palette.surfaceContainer,
           borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(24),
+            top: Radius.circular(28),
           ),
         ),
         padding: const EdgeInsets.symmetric(vertical: 24),
@@ -888,30 +1038,40 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 40,
+              width: 32,
               height: 4,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                color: palette.cardBorder,
+                color: palette.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: EdgeInsets.symmetric(
+                horizontal: ResponsiveHelper.horizontalPadding(context),
+              ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.sort_rounded,
-                    color: palette.accentBlue,
-                    size: 24,
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: palette.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.sort_rounded,
+                      color: palette.onPrimaryContainer,
+                      size: ResponsiveHelper.iconSize(context, base: 20),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Text(
                     'Sort By',
                     style: AppText.poppins(
-                      color: palette.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                      color: palette.onSurface,
+                      fontSize: ResponsiveHelper.fontSize(context, mobile: 18),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -949,36 +1109,39 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
           Get.back();
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
           decoration: BoxDecoration(
-            color: isSelected
-                ? palette.accentBlue.withOpacity(0.08)
-                : Colors.transparent,
+            color: isSelected ? palette.primaryContainer : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
               Icon(
                 icon,
-                color: isSelected ? palette.accentBlue : palette.textSecondary,
-                size: 22,
+                color: isSelected
+                    ? palette.onPrimaryContainer
+                    : palette.onSurfaceVariant,
+                size: ResponsiveHelper.iconSize(context, base: 22),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
                   label,
                   style: AppText.poppins(
-                    color:
-                        isSelected ? palette.accentBlue : palette.textPrimary,
-                    fontSize: 15,
+                    color: isSelected
+                        ? palette.onPrimaryContainer
+                        : palette.onSurface,
+                    fontSize: ResponsiveHelper.fontSize(context, mobile: 15),
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   ),
                 ),
               ),
               if (isSelected)
                 Icon(
-                  Icons.check_rounded,
-                  color: palette.accentBlue,
-                  size: 22,
+                  Icons.check_circle_rounded,
+                  color: palette.primary,
+                  size: ResponsiveHelper.iconSize(context, base: 22),
                 ),
             ],
           ),

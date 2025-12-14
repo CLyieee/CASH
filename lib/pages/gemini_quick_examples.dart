@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../controllers/gemini_controller.dart';
+import '../services/notification_service.dart';
 
 /// Quick example showing the 3 ways to analyze images with Gemini AI
 class GeminiQuickExample extends StatelessWidget {
@@ -52,7 +53,7 @@ class GeminiQuickExample extends StatelessWidget {
     final geminiController = Get.put(GeminiController());
 
     // Read image bytes
-    final bytes = await File(image.path).readAsBytes();
+    final bytes = await image.readAsBytes();
 
     // Analyze receipt - returns Map<String, dynamic>
     final result = await geminiController.analyzeReceiptImage(bytes);
@@ -109,7 +110,7 @@ class GeminiQuickExample extends StatelessWidget {
     ];
 
     // Read image bytes
-    final bytes = await File(image.path).readAsBytes();
+    final bytes = await image.readAsBytes();
 
     // Extract custom fields
     final result = await geminiController.extractCustomInfo(
@@ -149,7 +150,7 @@ class GeminiQuickExample extends StatelessWidget {
     ''';
 
     // Read image bytes
-    final bytes = await File(image.path).readAsBytes();
+    final bytes = await image.readAsBytes();
 
     // Analyze with custom requirements
     final result = await geminiController.analyzeCustomDocument(
@@ -173,21 +174,11 @@ class GeminiQuickExample extends StatelessWidget {
   }
 
   void _showSuccessMessage(String message) {
-    Get.snackbar(
-      'Success',
-      message,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-    );
+    NotificationService.showSuccess(message);
   }
 
   void _showErrorMessage(String message) {
-    Get.snackbar(
-      'Error',
-      message,
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-    );
+    NotificationService.showError(message);
   }
 }
 
@@ -268,7 +259,7 @@ class ExpenseTrackerExample {
     if (image == null) return;
 
     // 2. Analyze receipt
-    final bytes = await File(image.path).readAsBytes();
+    final bytes = await image.readAsBytes();
     final data = await geminiController.analyzeReceiptImage(bytes);
 
     if (data == null) return;

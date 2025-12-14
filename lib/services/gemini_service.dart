@@ -3,10 +3,12 @@ import 'dart:typed_data';
 import 'dart:io';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../models/receipt_model.dart';
+import '../config/api_keys.dart';
 
 class GeminiService {
-  static const String _apiKey =
-      'AIzaSyDSAB4NyKpwXaWoLoZOhG3P5Bc2PKwc_hE'; // Replace with your NEW API key from Google AI Studio
+  // API key is now stored in lib/config/api_keys.dart
+  // Make sure to add that file to .gitignore!
+  static const String _apiKey = ApiKeys.geminiApiKey;
   late final GenerativeModel _model;
 
   GeminiService() {
@@ -48,7 +50,7 @@ class GeminiService {
   }) async {
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-pro',
         apiKey: _apiKey,
       );
 
@@ -124,7 +126,6 @@ class GeminiService {
     3. Budget optimization tips
     4. Financial health score
     ''';
-
     return await generateContent(prompt);
   }
 
@@ -557,10 +558,14 @@ Ref No.                 [5034124744068 - USE THIS - this IS the reference]
 
 9. REFERENCE NUMBER (IMPORTANT!):
    - Look for "Ref No." label (NOT "InstaPay Invoice No.")
-   - Value: Long number on the RIGHT (e.g., "5034124744068")
-   - Extract: This number, NOT the InstaPay Invoice number above it
+   - Value: Long ALPHANUMERIC code on the RIGHT (e.g., "803512902111S", "5034124744068")
+   - Reference numbers can contain LETTERS at the end (like "S", "A", "AB")
+   - Extract: This code, NOT the InstaPay Invoice number above it
+   - InstaPay Invoice No. is typically SHORT (6-8 digits like "6910155")
+   - Ref No. is typically LONG (12+ characters like "803512902111S")
 
 ⚠️ DO NOT extract InstaPay Invoice No. - that's NOT the reference number!
+⚠️ Reference numbers can be ALPHANUMERIC (numbers + letters)!
 
 📋 EXAMPLE BANK TRANSFER EXTRACTION:
 
@@ -570,18 +575,18 @@ Bank Transfer Complete
 Sent via GCash
 
 Bank                    MariBank
-Account No.             ******0594
-Account Name            CLYTHEM O.
-Receipt sent to         eduardbertillo2@gmail.com
-Transfer Date           Oct 29,2025 02:36 PM
+Account No.             ******9008
+Account Name            GEMMA M.
+Receipt sent to         jhaymasaga14@gmail.com
+Transfer Date           Nov 27,2025 04:12 PM
 
-Transfer Amount         500.00
+Transfer Amount         7,000.00
 +Fee                    15.00
 
-Total                   ₱ 515.00
+Total                   ₱ 7,015.00
 
-InstaPay Invoice No.    5575967
-Ref No.                 5034124744068
+InstaPay Invoice No.    6910155
+Ref No.                 803512902111S
 ```
 
 Output JSON:
@@ -589,20 +594,20 @@ Output JSON:
 {
   "transaction_type": "bank_transfer",
   "bank_name": "MariBank",
-  "account_number": "******0594",
-  "account_name": "CLYTHEM O.",
-  "receipt_email": "eduardbertillo2@gmail.com",
-  "amount": "500.00",
+  "account_number": "******9008",
+  "account_name": "GEMMA M.",
+  "receipt_email": "jhaymasaga14@gmail.com",
+  "amount": "7000.00",
   "bank_fee": "15.00",
-  "total_amount": "515.00",
-  "reference_number": "5034124744068",
-  "date": "2025-10-29",
-  "time": "02:36 PM",
+  "total_amount": "7015.00",
+  "reference_number": "803512902111S",
+  "date": "2025-11-27",
+  "time": "04:12 PM",
   "source": "GCash"
 }
 ```
 
-⚠️ Notice: reference_number is from "Ref No.", NOT from "InstaPay Invoice No."!
+⚠️ Notice: reference_number is "803512902111S" (with letter S), NOT "6910155" (InstaPay Invoice)!
 
 FOR MONEY TRANSFERS:
 1. NAME: Look EVERYWHERE - top, middle, in cards, after any label, near phone number
@@ -664,9 +669,11 @@ FOR SCREEN PHOTOS (most important!):
 REFERENCE NUMBER - INTELLIGENT EXTRACTION:
 
 ⚠️ CRITICAL: DO NOT assume the reference number is in a specific position!
+⚠️ CRITICAL: Reference numbers can be ALPHANUMERIC (numbers + letters)!
 
 STEP 1: SCAN FOR LONG NUMBERS/CODES
 Look for alphanumeric sequences that could be references ANYWHERE:
+- Numbers with trailing letters: 803512902111S, 1234567890A, 9876543210AB
 - Long numbers: 5034322274670, 1234567890123
 - With spaces: 5034 322 274670, 1234 5678 9012
 - With dashes: 5034-322-274670, ABC-1234-5678
@@ -687,21 +694,24 @@ Look for ANY of these labels NEAR the alphanumeric code:
 - Serial No., Serial Number, Batch No., Batch Number
 
 **Label could be:**
-- BEFORE the number: "Ref No: 123456"
-- AFTER the number: "123456 (Ref)"
+- BEFORE the number: "Ref No: 803512902111S"
+- AFTER the number: "803512902111S (Ref)"
 - ABOVE the number (different line)
 - BELOW the number (different line)
 - Far away but related by context
 
 STEP 3: DISTINGUISH FROM OTHER DATA
 - Reference numbers are LONGER than phone numbers (10-20 chars vs 11 digits)
+- Reference numbers are LONGER than InstaPay Invoice numbers (12+ vs 6-8 digits)
 - NO decimal points (amounts have decimals)
 - NO currency symbols
-- May contain LETTERS and numbers (alphanumeric)
+- May contain LETTERS at the END (e.g., "803512902111S")
 - Usually UNIQUE identifier for transaction
+- For bank transfers: "Ref No." value, NOT "InstaPay Invoice No."
 
 STEP 4: EXTRACT EXACTLY AS SHOWN
 - Keep ALL characters: letters, numbers, spaces, dashes
+- Include trailing letters: "803512902111S" not "803512902111"
 - Maintain exact formatting: "5034 322 274670" not "5034322274670"
 - Include any prefix: "GC-" or "TXN-" or "REF-"
 
@@ -711,6 +721,7 @@ STEP 4: EXTRACT EXACTLY AS SHOWN
 - Label might be FAR from the actual number
 - Might have NO label at all (just a long unique code)
 - Could be SMALLEST text or LARGEST text
+- For BANK TRANSFERS: Always use "Ref No." not "InstaPay Invoice No."
 - TRUST THE CONTENT - look for what LOOKS like a reference/transaction ID
 
 DATE AND TIME - INTELLIGENT EXTRACTION:
@@ -1365,6 +1376,7 @@ IMPORTANT:
   }
 
   /// Process receipt image and return ReceiptModel (compatible with existing OCR flow)
+  /// Uses SMART EXTRACTION with retry and multiple strategies
   Future<ReceiptModel?> processReceipt(
     File imageFile,
     List<dynamic> feeRanges,
@@ -1373,10 +1385,25 @@ IMPORTANT:
       // Read image bytes
       final imageBytes = await imageFile.readAsBytes();
 
-      // Analyze with Gemini AI
-      final geminiResponse = await analyzeReceiptImage(imageBytes);
+      print('🔍 Starting SMART receipt processing with Gemini AI...');
+
+      // STRATEGY 1: Main extraction attempt
+      Map<String, dynamic>? geminiResponse =
+          await analyzeReceiptImage(imageBytes);
+
+      // STRATEGY 2: If main extraction failed, try with debug extraction first
+      if (geminiResponse == null || geminiResponse.containsKey('error')) {
+        print('⚠️ Main extraction failed, trying debug extraction...');
+        final debugText = await debugExtractAllText(imageBytes);
+        if (debugText != null && debugText.isNotEmpty) {
+          print('📝 Debug extraction got text, retrying analysis...');
+          // Retry with a simpler prompt for difficult images
+          geminiResponse = await _analyzeReceiptSimple(imageBytes);
+        }
+      }
 
       if (geminiResponse == null || geminiResponse.containsKey('error')) {
+        print('❌ All extraction strategies failed');
         return null;
       }
 
@@ -1384,10 +1411,15 @@ IMPORTANT:
       var receiptData = convertToReceiptModel(geminiResponse, feeRanges);
 
       if (receiptData == null) {
+        print('⚠️ Conversion failed, trying lenient extraction...');
+        receiptData = _extractLenient(geminiResponse, feeRanges);
+      }
+
+      if (receiptData == null) {
         return null;
       }
 
-      // If recipient name is missing or "Unknown", try dedicated name extraction
+      // STRATEGY 3: If recipient name is missing, try dedicated name extraction
       if (receiptData['recipientName'] == null ||
           receiptData['recipientName'] == 'Not found' ||
           receiptData['recipientName'] == 'Unknown' ||
@@ -1402,10 +1434,18 @@ IMPORTANT:
           receiptData['recipientName'] = extractedName;
           print('✅ Successfully extracted name: $extractedName');
         } else {
-          print('⚠️ Focused extraction also failed');
-          // Don't return null immediately - allow creation with partial data
-          // The validation in convertToReceiptModel already handles this
+          print('⚠️ Focused extraction also failed, using "Unknown"');
+          receiptData['recipientName'] = 'Unknown';
         }
+      }
+
+      // STRATEGY 4: If phone is missing but we have amount, still allow it
+      if ((receiptData['phoneNumber'] == null ||
+              receiptData['phoneNumber'].toString().isEmpty) &&
+          receiptData['amount'] != null &&
+          receiptData['amount'] > 0) {
+        print('⚠️ Phone missing but amount found - allowing partial data');
+        receiptData['phoneNumber'] = '';
       }
 
       // Create and return appropriate model based on transaction type
@@ -1416,31 +1456,133 @@ IMPORTANT:
         // For bank transfers, store as money transfer with special fields
         // Use account name as recipient name for compatibility
         return ReceiptModel(
-          recipientName: receiptData['accountName'] ?? 'Unknown',
+          recipientName: receiptData['accountName'] ??
+              receiptData['recipientName'] ??
+              'Unknown',
           phoneNumber: receiptData['receiptEmail'] ??
-              '', // Store email in phone field temporarily
-          amount: receiptData['amount'],
-          refNumber: receiptData['refNumber'],
-          date: DateTime.fromMillisecondsSinceEpoch(receiptData['date']),
-          fee: receiptData['bankFee'], // Use bankFee for fee field
-          source: receiptData['source'],
+              receiptData['bankName'] ??
+              '', // Store email or bank name
+          amount: receiptData['amount'] ?? 0.0,
+          refNumber: receiptData['refNumber'] ?? '',
+          date: DateTime.fromMillisecondsSinceEpoch(
+              receiptData['date'] ?? DateTime.now().millisecondsSinceEpoch),
+          fee: receiptData['bankFee'] ??
+              receiptData['fee'] ??
+              0.0, // Use bankFee for fee field
+          source: receiptData['source'] ?? 'GCash',
           transactionType: 'bank_transfer',
         );
       } else {
         // Regular money transfer
         return ReceiptModel(
-          recipientName: receiptData['recipientName'],
-          phoneNumber: receiptData['phoneNumber'],
-          amount: receiptData['amount'],
-          refNumber: receiptData['refNumber'],
-          date: DateTime.fromMillisecondsSinceEpoch(receiptData['date']),
-          fee: receiptData['fee'],
-          source: receiptData['source'],
+          recipientName: receiptData['recipientName'] ?? 'Unknown',
+          phoneNumber: receiptData['phoneNumber'] ?? '',
+          amount: receiptData['amount'] ?? 0.0,
+          refNumber: receiptData['refNumber'] ?? '',
+          date: DateTime.fromMillisecondsSinceEpoch(
+              receiptData['date'] ?? DateTime.now().millisecondsSinceEpoch),
+          fee: receiptData['fee'] ?? 0.0,
+          source: receiptData['source'] ?? 'GCash',
           transactionType: 'money_transfer',
         );
       }
     } catch (e) {
       print('Error processing receipt with Gemini: $e');
+      return null;
+    }
+  }
+
+  /// Simpler analysis for difficult images
+  Future<Map<String, dynamic>?> _analyzeReceiptSimple(
+      List<int> imageBytes) async {
+    final prompt = '''
+SIMPLE EXTRACTION - Read this receipt image and extract:
+
+1. NAME: The recipient/receiver name (could be masked like "MA****N M." or full name)
+2. PHONE: Phone number starting with +63, 09, or 63
+3. AMOUNT: The main money amount being transferred (NOT the fee, NOT the total)
+4. REFERENCE: Any long number (10+ digits) that looks like a transaction ID
+5. DATE: Transaction date
+6. SOURCE: GCash, Maya, BPI, BDO, or other service name
+
+Return JSON format:
+{
+  "recipient_name": "name here or Not found",
+  "phone_number": "phone here or Not found",
+  "amount": "number only like 1000.00",
+  "reference_number": "ref number or Not found",
+  "date": "YYYY-MM-DD",
+  "source": "GCash or Maya etc"
+}
+
+Be flexible - extract whatever you can see clearly. If something is unclear, still try your best guess.
+''';
+
+    try {
+      final response = await generateContentWithImage(prompt, imageBytes);
+      if (response == null) return null;
+
+      String cleanedResponse = response.trim();
+      if (cleanedResponse.startsWith('```json')) {
+        cleanedResponse = cleanedResponse.substring(7);
+      } else if (cleanedResponse.startsWith('```')) {
+        cleanedResponse = cleanedResponse.substring(3);
+      }
+      if (cleanedResponse.endsWith('```')) {
+        cleanedResponse =
+            cleanedResponse.substring(0, cleanedResponse.length - 3);
+      }
+      cleanedResponse = cleanedResponse.trim();
+
+      return Map<String, dynamic>.from(_parseJsonString(cleanedResponse));
+    } catch (e) {
+      print('Simple extraction error: $e');
+      return null;
+    }
+  }
+
+  /// Lenient extraction that accepts partial data
+  Map<String, dynamic>? _extractLenient(
+    Map<String, dynamic> geminiResponse,
+    List<dynamic> feeRanges,
+  ) {
+    try {
+      // Extract whatever we can find
+      final recipientName = geminiResponse['recipient_name']?.toString() ??
+          geminiResponse['account_name']?.toString() ??
+          '';
+      final phoneNumber = geminiResponse['phone_number']?.toString() ?? '';
+      final amountStr = geminiResponse['amount']?.toString() ?? '0';
+      final refNumber = geminiResponse['reference_number']?.toString() ?? '';
+      final source = geminiResponse['source']?.toString() ?? 'GCash';
+
+      final amount = double.tryParse(
+              amountStr.replaceAll(',', '').replaceAll('₱', '').trim()) ??
+          0.0;
+
+      // Very lenient - just need SOMETHING
+      if (amount > 0 || recipientName.isNotEmpty || phoneNumber.isNotEmpty) {
+        print('✅ Lenient extraction found some data');
+        return {
+          'transactionType': 'money_transfer',
+          'recipientName':
+              recipientName.isNotEmpty && recipientName != 'Not found'
+                  ? recipientName
+                  : 'Unknown',
+          'phoneNumber': phoneNumber != 'Not found'
+              ? _normalizePhoneNumber(phoneNumber)
+              : '',
+          'amount': amount,
+          'fee': 0.0,
+          'refNumber': refNumber != 'Not found' ? refNumber : '',
+          'date': DateTime.now().millisecondsSinceEpoch,
+          'source': source != 'Not found' ? source : 'GCash',
+        };
+      }
+
+      return null;
+    } catch (e) {
+      print('Lenient extraction error: $e');
       return null;
     }
   }

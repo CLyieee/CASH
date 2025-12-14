@@ -1,0 +1,55 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gradient Definition -->
+  <defs>
+    <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFC107;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF8F00;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="512" height="512" rx="120" fill="url(#greenGradient)"/>
+  
+  <!-- Main Content -->
+  <g transform="translate(256, 256)">
+    <!-- Receipt Card -->
+    <rect x="-100" y="-120" width="200" height="240" rx="16" fill="#FFFFFF" opacity="0.95"/>
+    <rect x="-100" y="-120" width="200" height="240" rx="16" fill="none" stroke="#2E7D32" stroke-width="3"/>
+    
+    <!-- Receipt Header -->
+    <rect x="-100" y="-120" width="200" height="50" rx="16" fill="url(#greenGradient)"/>
+    
+    <!-- App Icon in Header -->
+    <circle cx="0" cy="-95" r="18" fill="#FFFFFF"/>
+    <text x="0" y="-88" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#2E7D32" text-anchor="middle">₱</text>
+    
+    <!-- Receipt Content Lines -->
+    <line x1="-80" y1="-50" x2="80" y2="-50" stroke="#E0E0E0" stroke-width="2"/>
+    <line x1="-80" y1="-10" x2="80" y2="-10" stroke="#E0E0E0" stroke-width="2"/>
+    <line x1="-80" y1="30" x2="80" y2="30" stroke="#E0E0E0" stroke-width="2"/>
+    <line x1="-80" y1="70" x2="60" y2="70" stroke="#E0E0E0" stroke-width="2"/>
+    
+    <!-- Transaction Details -->
+    <text x="0" y="-25" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#2E7D32" text-anchor="middle">Money Transfer</text>
+    <text x="0" y="10" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#2E7D32" text-anchor="middle">₱1,000.00</text>
+    <text x="0" y="50" font-family="Arial, sans-serif" font-size="16" fill="#757575" text-anchor="middle">Reference: 123456</text>
+    
+    <!-- Scan Icon Overlay (Top Right) -->
+    <g transform="translate(90, -100)">
+      <circle cx="0" cy="0" r="25" fill="url(#goldGradient)"/>
+      <path d="M -8 -8 L 8 -8 L 8 8 L -8 8 Z" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="0" cy="0" r="3" fill="#FFFFFF"/>
+      <!-- Scan lines -->
+      <line x1="-12" y1="-12" x2="-6" y2="-6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+      <line x1="12" y1="-12" x2="6" y2="-6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+      <line x1="-12" y1="12" x2="-6" y2="6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+      <line x1="12" y1="12" x2="6" y2="6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>
+
+

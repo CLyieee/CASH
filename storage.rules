@@ -1,0 +1,58 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Backups folder - users can only access their own backups
+    match /backups/{userId}/{fileName} {
+      // Allow read: only the owner can read their backups
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow write: only the owner can create backups
+      // Limit file size to 50MB to prevent abuse
+      allow write: if request.auth != null 
+                   && request.auth.uid == userId
+                   && request.resource.size < 50 * 1024 * 1024
+                   && fileName.matches('backup_.*\\.json');
+      
+      // Allow delete: only the owner can delete their backups
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // User profile photos
+    match /users/{userId}/{fileName} {
+      // Allow read: anyone authenticated can see profile photos
+      allow read: if request.auth != null;
+      
+      // Allow write: only the owner, max 2MB, only images
+      allow write: if request.auth != null 
+                   && request.auth.uid == userId
+                   && request.resource.size < 2 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      
+      // Allow delete: only the owner
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Receipt images folder (if needed in future)
+    match /receipts/{userId}/{imageId} {
+      // Allow read: only the owner
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow write: only the owner, max 10MB per image
+      allow write: if request.auth != null 
+                   && request.auth.uid == userId
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      
+      // Allow delete: only the owner
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Default: deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

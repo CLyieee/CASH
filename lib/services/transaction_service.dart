@@ -1,9 +1,25 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/transaction_model.dart';
 
 class TransactionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   final String _transactionsCollection = 'transactions';
+
+  // Get current user ID
+  String getCurrentUserId() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('No user logged in');
+    }
+    return user.uid;
+  }
+
+  // Add transaction (alias for saveTransaction)
+  Future<void> addTransaction(TransactionModel transaction) async {
+    return saveTransaction(transaction);
+  }
 
   // Save transaction
   Future<void> saveTransaction(TransactionModel transaction) async {
@@ -70,13 +86,19 @@ class TransactionService {
       double totalCashIn = 0;
       double totalCashOut = 0;
       double totalFees = 0;
+      double availableFunds = 0;
       Map<String, double> sourceBreakdown = {};
 
       for (var transaction in transactions) {
         if (transaction.transactionType == 'Cash In') {
           totalCashIn += transaction.amount;
+          // Available funds increases with cash in (full amount, no fee deduction)
+          availableFunds += transaction.amount;
         } else {
           totalCashOut += transaction.amount;
+          // Available funds decreases with cash out (amount + fee)
+          availableFunds -= transaction.amount;
+          availableFunds -= transaction.fee;
         }
         totalFees += transaction.fee;
 
@@ -85,10 +107,16 @@ class TransactionService {
             (sourceBreakdown[transaction.source] ?? 0) + transaction.amount;
       }
 
+      // Ensure available funds is never negative
+      if (availableFunds < 0) {
+        availableFunds = 0;
+      }
+
       return {
         'totalCashIn': totalCashIn,
         'totalCashOut': totalCashOut,
         'totalFees': totalFees,
+        'availableFunds': availableFunds,
         'totalTransactions': transactions.length,
         'sourceBreakdown': sourceBreakdown,
         'recentTransactions': transactions.take(10).toList(),
@@ -120,16 +148,30 @@ class TransactionService {
     });
   }
 
-  // Update transaction
-  Future<void> updateTransaction(TransactionModel transaction) async {
+  // Check if reference number already exists for a user
+  Future<bool> isReferenceNumberDuplicate(
+    String userId,
+    String refNumber, {
+    String? excludeTransactionId,
+  }) async {
     try {
-      await _firestore
+      if (refNumber.trim().isEmpty) return false;
+
+      final querySnapshot = await _firestore
           .collection(_transactionsCollection)
-          .doc(transaction.id)
-          .update(transaction.toMap());
+          .where('userId', isEqualTo: userId)
+          .where('refNumber', isEqualTo: refNumber.trim())
+          .get();
+
+      // If excluding a transaction (for updates), filter it out
+      if (excludeTransactionId != null) {
+        return querySnapshot.docs.any((doc) => doc.id != excludeTransactionId);
+      }
+
+      return querySnapshot.docs.isNotEmpty;
     } catch (e) {
-      print('Error updating transaction: $e');
-      rethrow;
+      print('Error checking duplicate reference: $e');
+      return false;
     }
   }
 

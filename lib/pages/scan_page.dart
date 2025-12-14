@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:g/utils/app_text.dart';
+import 'package:g/utils/responsive_helper.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import '../services/ocr_service.dart';
@@ -53,6 +55,7 @@ class _ScanPageState extends State<ScanPage> {
   final AppController controller = Get.find<AppController>();
   String? scannedCode;
   bool isProcessing = false;
+  late _ScanPagePalette palette;
 
   @override
   void dispose() {
@@ -64,7 +67,23 @@ class _ScanPageState extends State<ScanPage> {
     try {
       setState(() => isProcessing = true);
 
-      // Pick image
+      // On web, only allow file upload (no camera)
+      if (kIsWeb && fromCamera) {
+        setState(() => isProcessing = false);
+        Get.snackbar(
+          'Camera Not Available',
+          'Camera is not available on web. Please use file upload instead.',
+          backgroundColor: const Color(0xFFFF9800),
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+          duration: const Duration(seconds: 3),
+        );
+        return;
+      }
+
+      // Pick image - works on both mobile and web
       final imageFile = await _ocrService.pickImage(fromCamera: fromCamera);
 
       if (imageFile == null) {
@@ -72,7 +91,21 @@ class _ScanPageState extends State<ScanPage> {
         return;
       }
 
-      // Process receipt with OCR
+      // On web, show message that we're using Gemini AI
+      if (kIsWeb) {
+        Get.snackbar(
+          'Processing with AI',
+          'Using Gemini AI to process receipt on web...',
+          backgroundColor: palette.accentBlue,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+          duration: const Duration(seconds: 2),
+        );
+      }
+
+      // Process receipt with OCR (or fallback to Gemini on web)
       final receipt = await _ocrService.processReceipt(
         imageFile,
         controller.feeRanges.toList(),
@@ -101,15 +134,23 @@ class _ScanPageState extends State<ScanPage> {
       }
     } catch (e) {
       setState(() => isProcessing = false);
+
+      // Check if it's a validation error
+      final errorMessage = e.toString();
+      final isValidationError =
+          errorMessage.contains('does not appear to be a receipt');
+
       Get.snackbar(
-        'Error',
-        'Failed to process image: ${e.toString()}',
+        isValidationError ? 'Invalid Image' : 'Error',
+        isValidationError
+            ? 'Please upload a valid receipt or transaction image with visible text, amounts, and transaction details.'
+            : 'Failed to process image: $errorMessage',
         backgroundColor: const Color(0xFFEF4444),
         colorText: Colors.white,
         snackPosition: SnackPosition.BOTTOM,
         margin: const EdgeInsets.all(16),
         borderRadius: 12,
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 4),
       );
     }
   }
@@ -117,419 +158,362 @@ class _ScanPageState extends State<ScanPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = _ScanPagePalette(theme);
+    palette = _ScanPagePalette(theme);
 
     return Scaffold(
       backgroundColor: palette.background,
+      appBar: AppBar(
+        backgroundColor: palette.cardSurface,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: palette.textPrimary, size: 20),
+          onPressed: () => Get.back(),
+        ),
+        title: Text(
+          'Scan Receipt',
+          style: AppText.poppins(
+            color: palette.textPrimary,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: false,
+      ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Modern Header
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-              decoration: BoxDecoration(
-                color: palette.cardSurface,
-                border: Border(
-                  bottom: BorderSide(
-                    color: palette.cardBorder,
-                    width: 1,
+        child: isProcessing
+            ? _buildProcessingView(palette)
+            : _buildScanView(palette),
+      ),
+    );
+  }
+
+  Widget _buildProcessingView(_ScanPagePalette palette) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 80,
+            height: 80,
+            child: CircularProgressIndicator(
+              strokeWidth: 4,
+              valueColor: AlwaysStoppedAnimation<Color>(palette.accentBlue),
+            ),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'Processing Receipt',
+            style: AppText.poppins(
+              color: palette.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Extracting transaction details...',
+            style: AppText.poppins(
+              color: palette.textSecondary,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      )
+          .animate()
+          .fadeIn(duration: 300.ms)
+          .slideY(begin: 0.1, end: 0, duration: 300.ms),
+    );
+  }
+
+  Widget _buildScanView(_ScanPagePalette palette) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Info Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: palette.accentBlue.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: palette.accentBlue.withOpacity(0.2),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: palette.accentBlue,
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: const Icon(
+                    Icons.info_outline_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Quick Tip',
+                        style: AppText.poppins(
+                          color: palette.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Capture a clear image of your money transfer receipt for best results',
+                        style: AppText.poppins(
+                          color: palette.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ).animate().fadeIn(delay: 100.ms).slideY(begin: -0.1, end: 0),
+
+          const SizedBox(height: 24),
+
+          // Web-specific info message
+          if (kIsWeb)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: palette.accentBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: palette.accentBlue.withOpacity(0.3),
+                  width: 1,
                 ),
               ),
               child: Row(
                 children: [
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => Get.back(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: palette.cardSurface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: palette.cardBorder,
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          color: palette.textPrimary,
-                          size: 20,
-                        ),
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: palette.accentBlue,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'On web, receipts are processed using Gemini AI for best results',
+                      style: AppText.poppins(
+                        color: palette.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Scan Receipt',
-                          style: AppText.poppins(
-                            color: palette.textPrimary,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        Text(
-                          'Upload or capture receipt image',
-                          style: AppText.poppins(
-                            color: palette.textSecondary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
-              ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2, end: 0),
+              ),
+            ).animate().fadeIn(delay: 250.ms),
+
+          const SizedBox(height: 32),
+
+          // Receipt Preview Container
+          Container(
+            height: 300,
+            decoration: BoxDecoration(
+              color: palette.cardSurface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: palette.cardBorder,
+                width: 2,
+              ),
             ),
-
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  children: [
-                    // Scanner Container
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: palette.cardSurface,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: palette.cardBorder,
-                            width: 1,
-                          ),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: Stack(
-                            children: [
-                              // Background
-                              Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      palette.isDark
-                                          ? const Color(0xFF1C2128)
-                                          : const Color(0xFFF3F4F6),
-                                      palette.isDark
-                                          ? const Color(0xFF0F1419)
-                                          : const Color(0xFFE5E7EB),
-                                    ],
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(24),
-                                        decoration: BoxDecoration(
-                                          color: palette.accentBlue
-                                              .withOpacity(0.12),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          Icons.receipt_long_rounded,
-                                          size: 64,
-                                          color: palette.accentBlue,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 24),
-                                      Text(
-                                        'Upload Receipt Image',
-                                        style: AppText.poppins(
-                                          color: palette.textPrimary,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 40),
-                                        child: Text(
-                                          'Use camera or gallery to capture your receipt',
-                                          style: AppText.poppins(
-                                            color: palette.textSecondary,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-
-                              // Scanning Frame Overlay
-                              Center(
-                                child: Container(
-                                  width: 240,
-                                  height: 240,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color:
-                                          palette.accentBlue.withOpacity(0.5),
-                                      width: 2,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Stack(
-                                    children: [
-                                      // Corner decorations
-                                      Positioned(
-                                        top: -2,
-                                        left: -2,
-                                        child: Container(
-                                          width: 24,
-                                          height: 24,
-                                          decoration: BoxDecoration(
-                                            color: palette.accentBlue,
-                                            borderRadius:
-                                                const BorderRadius.only(
-                                              topLeft: Radius.circular(18),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        top: -2,
-                                        right: -2,
-                                        child: Container(
-                                          width: 24,
-                                          height: 24,
-                                          decoration: BoxDecoration(
-                                            color: palette.accentBlue,
-                                            borderRadius:
-                                                const BorderRadius.only(
-                                              topRight: Radius.circular(18),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        bottom: -2,
-                                        left: -2,
-                                        child: Container(
-                                          width: 24,
-                                          height: 24,
-                                          decoration: BoxDecoration(
-                                            color: palette.accentBlue,
-                                            borderRadius:
-                                                const BorderRadius.only(
-                                              bottomLeft: Radius.circular(18),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        bottom: -2,
-                                        right: -2,
-                                        child: Container(
-                                          width: 24,
-                                          height: 24,
-                                          decoration: BoxDecoration(
-                                            color: palette.accentBlue,
-                                            borderRadius:
-                                                const BorderRadius.only(
-                                              bottomRight: Radius.circular(18),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                                    .animate(
-                                        onPlay: (controller) =>
-                                            controller.repeat())
-                                    .shimmer(
-                                        duration: 2000.ms,
-                                        color: palette.accentBlue
-                                            .withOpacity(0.3)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                          .animate()
-                          .fadeIn(delay: 100.ms, duration: 500.ms)
-                          .scale(begin: const Offset(0.95, 0.95)),
+            child: Stack(
+              children: [
+                // Dashed border effect
+                Center(
+                  child: Container(
+                    width: 200,
+                    height: 250,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: palette.accentBlue.withOpacity(0.3),
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-
-                    const SizedBox(height: 24),
-
-                    // Upload buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: isProcessing
-                                  ? null
-                                  : () =>
-                                      _pickAndProcessImage(fromCamera: false),
-                              borderRadius: BorderRadius.circular(16),
-                              child: Container(
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  color: palette.cardSurface,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: palette.cardBorder,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: palette.accentBlue
-                                            .withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(
-                                        Icons.photo_library_rounded,
-                                        color: palette.accentBlue,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'Gallery',
-                                      style: AppText.poppins(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: palette.textPrimary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: isProcessing
-                                  ? null
-                                  : () =>
-                                      _pickAndProcessImage(fromCamera: true),
-                              borderRadius: BorderRadius.circular(16),
-                              child: Container(
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      palette.accentGreen,
-                                      palette.accentGreen.withOpacity(0.8),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          palette.accentGreen.withOpacity(0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: const Icon(
-                                        Icons.camera_alt_rounded,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'Camera',
-                                      style: AppText.poppins(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ).animate().fadeIn(delay: 200.ms, duration: 500.ms),
-
-                    if (isProcessing) ...[
-                      const SizedBox(height: 24),
+                  )
+                      .animate(onPlay: (controller) => controller.repeat())
+                      .shimmer(
+                        duration: 2000.ms,
+                        color: palette.accentBlue.withOpacity(0.2),
+                      ),
+                ),
+                // Center icon
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: palette.cardSurface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: palette.cardBorder,
+                          color: palette.accentBlue.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.receipt_long_rounded,
+                          size: 60,
+                          color: palette.accentBlue,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Ready to Scan',
+                        style: AppText.poppins(
+                          color: palette.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 40),
+                        child: Text(
+                          'Choose how you want to upload your receipt',
+                          style: AppText.poppins(
+                            color: palette.textSecondary,
+                            fontSize: 13,
                           ),
+                          textAlign: TextAlign.center,
                         ),
-                        child: Column(
-                          children: [
-                            CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  palette.accentBlue),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Processing receipt...',
-                              style: AppText.poppins(
-                                color: palette.textPrimary,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Extracting transaction details',
-                              style: AppText.poppins(
-                                color: palette.textSecondary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ).animate().fadeIn(),
+                      ),
                     ],
+                  ),
+                ),
+              ],
+            ),
+          )
+              .animate()
+              .fadeIn(delay: 200.ms, duration: 500.ms)
+              .scale(begin: const Offset(0.9, 0.9)),
 
-                    const SizedBox(height: 20),
-                  ],
+          const SizedBox(height: 32),
+
+          // Camera Button (hidden on web)
+          if (!kIsWeb)
+            FilledButton.icon(
+              onPressed: () => _pickAndProcessImage(fromCamera: true),
+              icon: const Icon(Icons.camera_alt_rounded, size: 24),
+              label: Text(
+                'Take Photo',
+                style: AppText.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
+              style: FilledButton.styleFrom(
+                backgroundColor: palette.accentBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.1, end: 0),
+
+          if (!kIsWeb) const SizedBox(height: 16),
+
+          // Gallery/Upload Button
+          FilledButton.icon(
+            onPressed: () => _pickAndProcessImage(fromCamera: false),
+            icon: Icon(
+              kIsWeb ? Icons.upload_file_rounded : Icons.photo_library_rounded,
+              size: 24,
             ),
-          ],
-        ),
+            label: Text(
+              kIsWeb ? 'Upload Receipt Image' : 'Choose from Gallery',
+              style: AppText.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: palette.accentBlue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ).animate().fadeIn(delay: 400.ms).slideX(begin: 0.1, end: 0),
+
+          const SizedBox(height: 32),
+
+          // Features Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: palette.cardSurface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: palette.cardBorder),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.auto_awesome_rounded,
+                        color: palette.accentBlue, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'What We Extract',
+                      style: AppText.poppins(
+                        color: palette.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildFeatureItem(palette, 'Recipient name'),
+                _buildFeatureItem(palette, 'Phone number'),
+                _buildFeatureItem(palette, 'Amount sent'),
+                _buildFeatureItem(palette, 'Transaction fee'),
+                _buildFeatureItem(palette, 'Reference number'),
+                _buildFeatureItem(palette, 'Date & time'),
+              ],
+            ),
+          ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.1, end: 0),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(_ScanPagePalette palette, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Icon(
+            Icons.check_circle_rounded,
+            size: 18,
+            color: palette.accentGreen,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            text,
+            style: AppText.poppins(
+              color: palette.textSecondary,
+              fontSize: 14,
+            ),
+          ),
+        ],
       ),
     );
   }

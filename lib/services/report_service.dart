@@ -1,7 +1,10 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:file_picker/file_picker.dart';
 import '../models/transaction_model.dart';
 
 enum ReportPeriod { daily, weekly, monthly, yearly }
@@ -62,8 +65,8 @@ class ReportService {
     return buffer.toString();
   }
 
-  /// Export report to file and share
-  Future<void> exportReport(
+  /// Export report to file - let user choose save location
+  Future<String?> exportReport(
     List<TransactionModel> transactions,
     ReportPeriod period,
     DateTime startDate,
@@ -74,13 +77,105 @@ class ReportService {
       final csvContent =
           await generateCSVReport(transactions, period, startDate, endDate);
 
-      // Get application documents directory (more reliable than temporary)
+      final fileName =
+          'transaction_report_${_getPeriodFileLabel(period)}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+
+      if (kIsWeb) {
+        // For web: Use file picker to download
+        // Note: Web export is limited, recommend using mobile app
+        return 'Web export not fully supported. Please use mobile app.';
+      } else {
+        // For mobile and desktop
+        try {
+          // Check if it's Android or iOS
+          final isAndroid = Platform.isAndroid;
+          final isIOS = Platform.isIOS;
+
+          if (isAndroid || isIOS) {
+            // For mobile: Save to directory and share
+            Directory? directory;
+
+            if (isAndroid) {
+              // Try to get Downloads directory
+              directory = Directory('/storage/emulated/0/Download');
+              if (!await directory.exists()) {
+                directory = await getExternalStorageDirectory();
+              }
+            } else {
+              // iOS
+              directory = await getApplicationDocumentsDirectory();
+            }
+
+            if (directory == null) {
+              throw Exception('Could not access storage directory');
+            }
+
+            final file = File('${directory.path}/$fileName');
+            await file.writeAsString(csvContent);
+
+            // Share the file
+            await Share.shareXFiles(
+              [XFile(file.path)],
+              subject: 'Transaction Report - ${_getPeriodLabel(period)}',
+              text:
+                  'Here is your ${_getPeriodLabel(period).toLowerCase()} transaction report',
+            );
+
+            return file.path;
+          } else {
+            // For desktop: Use file picker
+            String? outputPath = await FilePicker.platform.saveFile(
+              dialogTitle: 'Save Transaction Report',
+              fileName: fileName,
+              type: FileType.custom,
+              allowedExtensions: ['csv'],
+            );
+
+            if (outputPath == null) {
+              // User cancelled
+              return null;
+            }
+
+            // Ensure the file has .csv extension
+            if (!outputPath.toLowerCase().endsWith('.csv')) {
+              outputPath = '$outputPath.csv';
+            }
+
+            // Write to the chosen file
+            final file = File(outputPath);
+            await file.writeAsString(csvContent);
+
+            return outputPath;
+          }
+        } catch (e) {
+          print('Error in platform-specific export: $e');
+          rethrow;
+        }
+      }
+    } catch (e) {
+      print('Error exporting report: $e');
+      rethrow;
+    }
+  }
+
+  /// Share report file (alternative method using share dialog)
+  Future<void> shareReport(
+    List<TransactionModel> transactions,
+    ReportPeriod period,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      // Generate CSV content
+      final csvContent =
+          await generateCSVReport(transactions, period, startDate, endDate);
+
+      // Get temporary directory
       Directory? directory;
       try {
-        directory = await getApplicationDocumentsDirectory();
+        directory = await getTemporaryDirectory();
       } catch (e) {
-        print('Error getting app directory: $e, trying external storage...');
-        // Fallback to external storage directory on Android
+        print('Error getting temp directory: $e');
         if (Platform.isAndroid) {
           directory = await getExternalStorageDirectory();
         }
@@ -104,7 +199,7 @@ class ReportService {
             'Here is your ${_getPeriodLabel(period).toLowerCase()} transaction report',
       );
     } catch (e) {
-      print('Error exporting report: $e');
+      print('Error sharing report: $e');
       rethrow;
     }
   }

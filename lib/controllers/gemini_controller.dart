@@ -1,7 +1,11 @@
 import 'package:get/get.dart';
+import 'dart:io';
+import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/gemini_service.dart';
 import '../services/transaction_service.dart';
+import '../services/ocr_service.dart';
 import '../models/transaction_model.dart';
 import '../models/user_model.dart';
 import 'app_controller.dart';
@@ -19,6 +23,10 @@ class GeminiController extends GetxController {
   // Pending action (waiting for user confirmation)
   final Rxn<ActionRequest> pendingAction = Rxn<ActionRequest>();
 
+  // Chat session management
+  final RxList<ChatSession> savedChatSessions = <ChatSession>[].obs;
+  DateTime? _currentSessionStart;
+
   List<TransactionModel> _userTransactions = [];
   final currencyFormat =
       NumberFormat.currency(locale: 'en_PH', symbol: '₱', decimalDigits: 2);
@@ -27,11 +35,34 @@ class GeminiController extends GetxController {
   void onInit() {
     super.onInit();
     _loadUserTransactions();
+    _loadChatHistory();
   }
 
   /// Parse simple user commands and return an ActionRequest if found
   ActionRequest? _parseUserCommand(String message) {
     final lower = message.toLowerCase();
+
+    // Check if user wants to modify pending transaction type
+    if (pendingAction.value != null &&
+        pendingAction.value!.type == ActionType.saveTransaction) {
+      if (lower.contains('cash in')) {
+        pendingAction.value!.payload['transactionType'] = 'Cash In';
+        chatHistory.add(ChatMessage(
+            text:
+                'Transaction type updated to Cash In. Reply "yes" to confirm and save.',
+            isUser: false,
+            timestamp: DateTime.now()));
+        return null;
+      } else if (lower.contains('cash out')) {
+        pendingAction.value!.payload['transactionType'] = 'Cash Out';
+        chatHistory.add(ChatMessage(
+            text:
+                'Transaction type updated to Cash Out. Reply "yes" to confirm and save.',
+            isUser: false,
+            timestamp: DateTime.now()));
+        return null;
+      }
+    }
 
     // Clear all transactions: "clear all transactions" or "delete all transactions"
     if (RegExp(r'(clear|delete)\s+all\s+transactions?', caseSensitive: false)
@@ -74,22 +105,6 @@ class GeminiController extends GetxController {
         type: ActionType.deleteTransaction,
         payload: {'transactionId': id},
         description: 'Delete transaction with id $id',
-      );
-    }
-
-    // Update transaction amount: "update transaction 123 set amount to 500"
-    final updateMatch = RegExp(
-            r'update transaction(?: id| #)?\s*([\w\-]+).*amount to\s*([0-9]+(?:\.[0-9]+)?)',
-            caseSensitive: false)
-        .firstMatch(lower);
-    if (updateMatch != null) {
-      final id = updateMatch.group(1)!;
-      final amt = double.tryParse(updateMatch.group(2)!) ?? 0.0;
-      return ActionRequest(
-        type: ActionType.updateTransaction,
-        payload: {'transactionId': id, 'amount': amt},
-        description:
-            'Update transaction $id amount to ${currencyFormat.format(amt)}',
       );
     }
 
@@ -149,36 +164,6 @@ class GeminiController extends GetxController {
           await _transactionService.deleteTransaction(id);
           chatHistory.add(ChatMessage(
               text: 'Transaction $id deleted.',
-              isUser: false,
-              timestamp: DateTime.now()));
-          break;
-        case ActionType.updateTransaction:
-          final id = action.payload['transactionId'] as String;
-          final amount = (action.payload['amount'] as num).toDouble();
-          // fetch transaction, update amount, save
-          final txs = await _transactionService.getUserTransactions(
-              _appController.currentUserId.value,
-              limit: 1000);
-          final tx = txs.firstWhere((t) => t.id == id,
-              orElse: () => throw 'Transaction not found');
-          final updated = TransactionModel(
-            id: tx.id,
-            userId: tx.userId,
-            recipientName: tx.recipientName,
-            phoneNumber: tx.phoneNumber,
-            amount: amount,
-            fee: tx.fee,
-            totalAmount: amount + tx.fee,
-            refNumber: tx.refNumber,
-            date: tx.date,
-            source: tx.source,
-            transactionType: tx.transactionType,
-            createdAt: tx.createdAt,
-          );
-          await _transactionService.updateTransaction(updated);
-          chatHistory.add(ChatMessage(
-              text:
-                  'Transaction $id updated to ${currencyFormat.format(amount)}.',
               isUser: false,
               timestamp: DateTime.now()));
           break;
@@ -251,6 +236,76 @@ class GeminiController extends GetxController {
           clearChat();
           chatHistory.add(ChatMessage(
               text: 'Chat history cleared.',
+              isUser: false,
+              timestamp: DateTime.now()));
+          break;
+        case ActionType.saveTransaction:
+          final recipientName = action.payload['recipientName'] as String;
+          final amount = (action.payload['amount'] as num).toDouble();
+          final refNumber = action.payload['refNumber'] as String;
+          final phoneNumber = action.payload['phoneNumber'] as String;
+          final transactionType = action.payload['transactionType'] as String;
+
+          // Check for duplicate reference number
+          if (refNumber.isNotEmpty) {
+            final isDuplicate =
+                await _transactionService.isReferenceNumberDuplicate(
+              _appController.currentUserId.value,
+              refNumber,
+            );
+
+            if (isDuplicate) {
+              chatHistory.add(ChatMessage(
+                  text: '⚠️ **Duplicate Reference Number Detected**\n\n'
+                      'Reference number "$refNumber" already exists in your transaction history.\n\n'
+                      '**What you can do:**\n'
+                      '• Edit the reference number to make it unique\n'
+                      '• Check if this transaction was already recorded\n'
+                      '• Scan a different receipt\n\n'
+                      'Each reference number must be unique to avoid duplicate entries.',
+                  isUser: false,
+                  timestamp: DateTime.now()));
+              pendingAction.value = null;
+              return;
+            }
+          }
+
+          // Calculate fee based on amount
+          final fee = _calculateFee(amount);
+          final totalAmount = amount + fee;
+
+          // Create transaction model
+          final transaction = TransactionModel(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            userId: _appController.currentUserId.value,
+            recipientName: recipientName,
+            phoneNumber: phoneNumber,
+            amount: amount,
+            fee: fee,
+            totalAmount: totalAmount,
+            refNumber: refNumber,
+            date: DateTime.now(),
+            source: 'AI Chat',
+            transactionType: transactionType,
+            createdAt: DateTime.now(),
+          );
+
+          // Save transaction
+          await _transactionService.saveTransaction(transaction);
+          await _loadUserTransactions();
+
+          chatHistory.add(ChatMessage(
+              text: '''✅ Transaction saved successfully!
+
+📄 Details:
+• Recipient: $recipientName
+• Amount: ${currencyFormat.format(amount)}
+• Fee: ${currencyFormat.format(fee)}
+• Total: ${currencyFormat.format(totalAmount)}
+• Reference: $refNumber
+• Type: $transactionType
+
+Added to your transaction history.''',
               isUser: false,
               timestamp: DateTime.now()));
           break;
@@ -360,11 +415,12 @@ Help them understand the app features and how to track their finances.''';
 
 📊 COMPREHENSIVE FINANCIAL ANALYSIS:
 
-Basic Summary:
-- Total Income: ${currencyFormat.format(totalIncome)} ($cashInCount transactions)
-- Total Expenses: ${currencyFormat.format(totalExpenses)} ($cashOutCount transactions)
-- Current Balance: ${currencyFormat.format(balance)}
-- Total Transactions: $transactionCount
+Dashboard Summary:
+- Total Cash In: ${currencyFormat.format(totalIncome)} ($cashInCount transactions)
+- Total Cash Out: ${currencyFormat.format(totalExpenses)} ($cashOutCount transactions)
+- Available Funds: ${currencyFormat.format(balance)}
+- All Transactions: $transactionCount
+- Total Fees Paid: Tracked separately
 
 Transaction Analytics:
 - Average Income per Transaction: ${currencyFormat.format(avgIncome)}
@@ -381,16 +437,17 @@ Recent Transactions (Last 5):
 $recentTransactions
 
 Financial Insights:
-- Expense Ratio: ${((totalExpenses / totalIncome) * 100).toStringAsFixed(1)}% of income
-- Savings Rate: ${(((totalIncome - totalExpenses) / totalIncome) * 100).toStringAsFixed(1)}%
-- Average Daily Spending: ${currencyFormat.format(totalExpenses / daysDiff)}
+- Money Sent Ratio: ${((totalExpenses / totalIncome) * 100).toStringAsFixed(1)}% of received
+- Net Balance Rate: ${(((totalIncome - totalExpenses) / totalIncome) * 100).toStringAsFixed(1)}%
+- Average Daily Cash Out: ${currencyFormat.format(totalExpenses / daysDiff)}
 
 IMPORTANT: You have the ability to:
 - Delete transactions (single, by recipient, or all)
-- Update transaction amounts
 - Set or update fee ranges
 - Clear chat history
 - Analyze and provide financial advice
+
+Note: Transactions cannot be edited once saved. If a transaction is incorrect, it must be deleted and a new one created.
 
 When a user asks you to modify data (like "set fee for 1-500 to 15"), you WILL execute the action after user confirmation. Do not say you cannot perform these actions. You CAN and WILL do them.
 
@@ -399,18 +456,19 @@ Provide helpful, concise financial advice based on this data. When asked about i
       // Fallback for empty or insufficient data
       return '''You are a financial assistant for the GCash receipt scanning app with FULL CONTROL over the app.
 
-User's Financial Summary:
-- Total Income: ${currencyFormat.format(totalIncome)}
-- Total Expenses: ${currencyFormat.format(totalExpenses)}
-- Current Balance: ${currencyFormat.format(balance)}
-- Total Transactions: $transactionCount
+User's Dashboard Summary:
+- Total Cash In: ${currencyFormat.format(totalIncome)}
+- Total Cash Out: ${currencyFormat.format(totalExpenses)}
+- Available Funds: ${currencyFormat.format(balance)}
+- All Transactions: $transactionCount
 
 IMPORTANT: You have the ability to:
 - Delete transactions (single, by recipient, or all)
-- Update transaction amounts
 - Set or update fee ranges
 - Clear chat history
 - Analyze and provide financial advice
+
+Note: Transactions cannot be edited once saved. If a transaction is incorrect, it must be deleted and a new one created.
 
 When a user asks you to modify data (like "set fee for 1-500 to 15"), you WILL execute the action after user confirmation. Do not say you cannot perform these actions. You CAN and WILL do them.
 
@@ -418,7 +476,126 @@ Provide helpful, concise financial advice. Be friendly and supportive.''';
     }
   }
 
-  /// Generate simple text response
+  /// Check if the query is finance-related and needs full context
+  bool _isFinanceRelatedQuery(String lowerMessage) {
+    final financeKeywords = [
+      'balance',
+      'money',
+      'cash',
+      'transaction',
+      'spend',
+      'spent',
+      'income',
+      'expense',
+      'payment',
+      'paid',
+      'receive',
+      'received',
+      'total',
+      'amount',
+      'fee',
+      'fees',
+      'recipient',
+      'send',
+      'sent',
+      'transfer',
+      'how much',
+      'analytics',
+      'report',
+      'summary',
+      'dashboard',
+      'history',
+      'record',
+      'save',
+      'delete',
+      'remove',
+      'clear',
+      'show',
+      'list',
+      'view',
+      'cash in',
+      'cash out',
+      'load',
+      'bank transfer',
+      'pesos',
+      '₱',
+      'financial',
+      'budget',
+      'savings',
+      'debt',
+      'owe',
+      'owes'
+    ];
+
+    return financeKeywords.any((keyword) => lowerMessage.contains(keyword));
+  }
+
+  /// Quick, rule-based answers for frequent questions (fees, totals, counts)
+  String? _buildQuickAnswer(String lowerMessage) {
+    if (_userTransactions.isEmpty) {
+      return null;
+    }
+
+    final totalIncome = _userTransactions
+        .where((t) => t.transactionType == 'Cash In')
+        .fold<double>(0, (sum, t) => sum + t.amount);
+    final totalExpenses = _userTransactions
+        .where((t) => t.transactionType == 'Cash Out')
+        .fold<double>(0, (sum, t) => sum + t.amount);
+    final balance = totalIncome - totalExpenses;
+    final totalFees =
+        _userTransactions.fold<double>(0, (sum, t) => sum + t.fee);
+    final txCount = _userTransactions.length;
+
+    // Total fees asked
+    if (lowerMessage.contains('total fee') ||
+        lowerMessage.contains('fees total') ||
+        lowerMessage.contains('how much fee') ||
+        lowerMessage.contains('all my fee')) {
+      return 'Total fees paid: ${currencyFormat.format(totalFees)} across $txCount transactions.';
+    }
+
+    // Balance
+    if (lowerMessage.contains('balance')) {
+      return 'Balance (Cash In - Cash Out): ${currencyFormat.format(balance)}\nCash In: ${currencyFormat.format(totalIncome)}\nCash Out: ${currencyFormat.format(totalExpenses)}';
+    }
+
+    // Totals
+    if (lowerMessage.contains('total cash in') ||
+        lowerMessage.contains('total income')) {
+      return 'Total Cash In: ${currencyFormat.format(totalIncome)} across ${_userTransactions.where((t) => t.transactionType == 'Cash In').length} transactions.';
+    }
+    if (lowerMessage.contains('total cash out') ||
+        lowerMessage.contains('total expense')) {
+      return 'Total Cash Out: ${currencyFormat.format(totalExpenses)} across ${_userTransactions.where((t) => t.transactionType == 'Cash Out').length} transactions.';
+    }
+
+    // Recent transactions quick view
+    if (lowerMessage.contains('last 5') ||
+        lowerMessage.contains('recent transactions')) {
+      final recent = _userTransactions.take(5).toList();
+      final lines = recent
+          .map((t) =>
+              '${t.transactionType}: ${currencyFormat.format(t.amount)} to ${t.recipientName} on ${DateFormat('MMM dd').format(t.createdAt)}')
+          .join('\n');
+      return 'Here are your last ${recent.length} transactions:\n$lines';
+    }
+
+    return null;
+  }
+
+  String _commandsCatalog() {
+    return '''I can do these for you (no tech-speak needed):
+
+• Check money: "what's my balance?", "total cash in", "total cash out", or "how much are all my fees?".
+• Recent activity: "show my last 5 transactions" or "recent transactions".
+• Scan a receipt: "scan this receipt" (attach a photo). If the type is wrong, reply "cash in" or "cash out", then say "yes" to save.
+• Update fees: "set fee for 1-500 to 15" (use any number range and amount).
+• Fix the chat: "clear chat" or "reset conversation".
+• Confirm or cancel: reply "yes" / "confirm" or "no" / "cancel" when I ask.''';
+  }
+
+  /// Generate simple text response using Gemini AI
   Future<void> generateResponse(String prompt) async {
     isLoading.value = true;
     error.value = '';
@@ -438,20 +615,53 @@ Provide helpful, concise financial advice. Be friendly and supportive.''';
     }
   }
 
-  /// Send chat message and maintain history
-  Future<void> sendChatMessage(String message) async {
+  /// Send chat message and maintain history using Gemini AI
+  Future<void> sendChatMessage(String message,
+      {bool skipAddingUserMessage = false}) async {
     isLoading.value = true;
     error.value = '';
 
-    // Reload transactions to get latest data
     await _loadUserTransactions();
 
-    // Add user message to history
-    chatHistory.add(ChatMessage(
-      text: message,
-      isUser: true,
-      timestamp: DateTime.now(),
-    ));
+    if (!skipAddingUserMessage) {
+      chatHistory.add(ChatMessage(
+        text: message,
+        isUser: true,
+        timestamp: DateTime.now(),
+      ));
+      _saveChatHistory(); // Save after user message
+    }
+
+    final lower = message.toLowerCase().trim();
+
+    // Show command catalog
+    if (lower.contains('show commands') ||
+        lower.contains('list commands') ||
+        lower == 'help' ||
+        lower.contains('what can you do')) {
+      chatHistory.add(ChatMessage(
+        text: _commandsCatalog(),
+        isUser: false,
+        timestamp: DateTime.now(),
+      ));
+      _saveChatHistory();
+      isLoading.value = false;
+      return;
+    }
+
+    // Confirmation flow
+    if (pendingAction.value != null &&
+        (lower == 'yes' || lower == 'y' || lower == 'confirm')) {
+      await confirmPendingAction();
+      isLoading.value = false;
+      return;
+    }
+    if (pendingAction.value != null &&
+        (lower == 'no' || lower == 'n' || lower == 'cancel')) {
+      cancelPendingAction();
+      isLoading.value = false;
+      return;
+    }
 
     // Check for actionable commands first
     final actionRequest = _parseUserCommand(message);
@@ -461,10 +671,37 @@ Provide helpful, concise financial advice. Be friendly and supportive.''';
       return;
     }
 
+    // Quick answers for common questions (totals, balances, fees)
+    final quickAnswer = _buildQuickAnswer(lower);
+    if (quickAnswer != null) {
+      chatHistory.add(ChatMessage(
+        text: quickAnswer,
+        isUser: false,
+        timestamp: DateTime.now(),
+      ));
+      _saveChatHistory();
+      isLoading.value = false;
+      return;
+    }
+
+    // Use Gemini AI for general conversation
     try {
-      // Build context-aware prompt
-      final contextPrompt = _buildContextPrompt();
-      final fullMessage = '$contextPrompt\n\nUser Question: $message';
+      // Check if user is asking about finances or just casual conversation
+      final isFinanceQuery = _isFinanceRelatedQuery(lower);
+
+      // Build context-aware prompt only for finance queries
+      String fullMessage;
+      if (isFinanceQuery) {
+        final contextPrompt = _buildContextPrompt();
+        fullMessage = '$contextPrompt\n\nUser Question: $message';
+      } else {
+        // For casual conversation, use minimal prompt
+        fullMessage =
+            '''You are a friendly financial assistant for the GCash receipt scanning app.
+Keep responses brief and natural. If the user asks about their finances, transactions, or balance, let them know you can help with that.
+
+User: $message''';
+      }
 
       // Convert chat history to Gemini Content format (only AI responses for context)
       final history = chatHistory
@@ -480,8 +717,199 @@ Provide helpful, concise financial advice. Be friendly and supportive.''';
           isUser: false,
           timestamp: DateTime.now(),
         ));
+        _saveChatHistory(); // Auto-save after each message
       } else {
         error.value = 'Failed to get response';
+      }
+    } catch (e) {
+      error.value = 'Error: $e';
+      chatHistory.add(ChatMessage(
+        text: 'Sorry, I encountered an error. Please try again.',
+        isUser: false,
+        timestamp: DateTime.now(),
+      ));
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Send chat message with image (for receipt scanning)
+  Future<void> sendChatMessageWithImage(String message, File? imageFile) async {
+    print('🟢 [CONTROLLER] sendChatMessageWithImage called');
+    print('🟢 [CONTROLLER] Message: "$message"');
+    print('🟢 [CONTROLLER] Has image: ${imageFile != null}');
+    print('🟢 [CONTROLLER] isLoading: ${isLoading.value}');
+    print('🟢 [CONTROLLER] Current chat history length: ${chatHistory.length}');
+
+    // Prevent duplicate calls - check both loading state and recent identical messages
+    if (isLoading.value) {
+      print('⛔ [CONTROLLER] Already loading, returning');
+      return;
+    }
+
+    final messageText =
+        imageFile != null ? '$message [Image attached]' : message;
+    print('🟢 [CONTROLLER] Final message text: "$messageText"');
+
+    // Check if identical message was sent within last 2 seconds (debounce)
+    if (chatHistory.isNotEmpty && chatHistory.last.isUser) {
+      final lastMessage = chatHistory.last;
+      final timeDiff =
+          DateTime.now().difference(lastMessage.timestamp).inSeconds;
+      print('🟢 [CONTROLLER] Last message: "${lastMessage.text}"');
+      print('🟢 [CONTROLLER] Time diff: $timeDiff seconds');
+      if (lastMessage.text == messageText && timeDiff < 2) {
+        print('⛔ [CONTROLLER] Duplicate detected within 2 seconds, returning');
+        return; // Ignore duplicate within 2 seconds
+      }
+    }
+
+    isLoading.value = true;
+    print('🟢 [CONTROLLER] Set isLoading to true');
+    error.value = '';
+
+    // Reload transactions to get latest data
+    await _loadUserTransactions();
+
+    // Track session start time if this is the first message
+    if (chatHistory.isEmpty) {
+      _currentSessionStart = DateTime.now();
+    }
+
+    // Add user message to history
+    print('🟢 [CONTROLLER] Adding user message to chat history...');
+    chatHistory.add(ChatMessage(
+      text: messageText,
+      isUser: true,
+      timestamp: DateTime.now(),
+    ));
+    print('🟢 [CONTROLLER] Message added. New length: ${chatHistory.length}');
+
+    try {
+      String? response;
+
+      if (imageFile != null) {
+        // Image processing handled by OCR service
+        // Read image bytes
+        await imageFile.readAsBytes();
+
+        // Check if user wants to scan receipt and save
+        final isReceiptScan = message.toLowerCase().contains('scan') ||
+            message.toLowerCase().contains('receipt') ||
+            message.toLowerCase().contains('save') ||
+            message.toLowerCase().contains('transaction');
+
+        if (isReceiptScan) {
+          // Use OCR service to extract receipt data (handles both money transfer and bank transfer)
+          chatHistory.add(ChatMessage(
+            text: 'Analyzing receipt image...',
+            isUser: false,
+            timestamp: DateTime.now(),
+          ));
+
+          final ocrService = OCRService();
+          final receiptModel = await ocrService.processReceipt(
+            imageFile,
+            _appController.feeRanges,
+          );
+
+          if (receiptModel != null) {
+            // Extract transaction data from OCR result
+            final recipientName = receiptModel.recipientName;
+            final amount = receiptModel.amount;
+            final refNumber = receiptModel.refNumber;
+            final phoneNumber = receiptModel.phoneNumber;
+            final transactionType = receiptModel.transactionType;
+
+            // Show extracted data to user for confirmation
+            response = '''✅ Receipt scanned successfully!
+
+📄 Extracted Data:
+• Recipient: $recipientName
+• Amount: ${currencyFormat.format(amount)}
+• Reference: $refNumber
+• Phone: ${phoneNumber.isNotEmpty ? phoneNumber : 'Not found'}
+• Type: $transactionType
+
+Please confirm if you want to save this transaction by typing "yes" or "save".
+To change the transaction type, reply with:
+- "cash in" for Cash In
+- "cash out" for Cash Out''';
+
+            // Store pending transaction for confirmation
+            pendingAction.value = ActionRequest(
+              type: ActionType.saveTransaction,
+              payload: {
+                'recipientName': recipientName,
+                'amount': amount,
+                'refNumber': refNumber,
+                'phoneNumber': phoneNumber,
+                'transactionType': transactionType,
+              },
+              description: 'Save scanned receipt as transaction',
+            );
+          } else {
+            response =
+                '❌ Could not scan receipt. Please make sure the image is clear and shows a GCash receipt (Money Transfer or Bank Transfer).';
+          }
+        } else {
+          // General image analysis disabled in manual mode
+          response =
+              'Image understanding is available only for receipt scanning right now. Try saying "scan this receipt" with a clear receipt image.';
+        }
+      } else {
+        // No image, just text message - user message already added above, so skip adding it again
+        print(
+            '🟢 [CONTROLLER] No image, delegating to sendChatMessage (user message already added)');
+        isLoading.value =
+            false; // Reset loading since sendChatMessage will set it
+        await sendChatMessage(message, skipAddingUserMessage: true);
+        return;
+      }
+
+      print('🟢 [CONTROLLER] Adding AI response to chat history...');
+      chatHistory.add(ChatMessage(
+        text: response,
+        isUser: false,
+        timestamp: DateTime.now(),
+      ));
+      print(
+          '🟢 [CONTROLLER] AI response added. New length: ${chatHistory.length}');
+    } catch (e) {
+      error.value = 'Error: $e';
+      print('❌ [CONTROLLER] Error: $e');
+      chatHistory.add(ChatMessage(
+        text: 'Sorry, I encountered an error processing your request: $e',
+        isUser: false,
+        timestamp: DateTime.now(),
+      ));
+    } finally {
+      isLoading.value = false;
+      print('🟢 [CONTROLLER] Set isLoading to false');
+      print('🟢 [CONTROLLER] Final chat history length: ${chatHistory.length}');
+    }
+  }
+
+  /// Calculate fee based on amount and fee ranges
+  double _calculateFee(double amount) {
+    for (final range in _appController.feeRanges) {
+      if (amount >= range.from && amount <= range.to) {
+        return range.fee.toDouble();
+      }
+    }
+    return 0.0;
+  }
+
+  /// Stream response for real-time generation using Gemini AI
+  void streamResponse(String prompt, Function(String) onChunk) async {
+    isLoading.value = true;
+    error.value = '';
+    currentResponse.value = '';
+
+    try {
+      await for (final chunk in _geminiService.generateContentStream(prompt)) {
+        currentResponse.value += chunk;
+        onChunk(chunk);
       }
     } catch (e) {
       error.value = 'Error: $e';
@@ -490,41 +918,13 @@ Provide helpful, concise financial advice. Be friendly and supportive.''';
     }
   }
 
-  /// Stream response for real-time generation
-  void streamResponse(String prompt, Function(String) onChunk) {
-    isLoading.value = true;
-    error.value = '';
-    currentResponse.value = '';
-
-    _geminiService.generateContentStream(prompt).listen(
-      (chunk) {
-        currentResponse.value += chunk;
-        onChunk(chunk);
-      },
-      onError: (e) {
-        error.value = 'Error: $e';
-        isLoading.value = false;
-      },
-      onDone: () {
-        isLoading.value = false;
-      },
-    );
-  }
-
   /// Analyze transaction using AI
   Future<String?> analyzeTransaction(String transactionDetails) async {
-    isLoading.value = true;
-    error.value = '';
-
     try {
-      final response =
-          await _geminiService.analyzeTransaction(transactionDetails);
-      return response;
+      return await _geminiService.analyzeTransaction(transactionDetails);
     } catch (e) {
       error.value = 'Error: $e';
       return null;
-    } finally {
-      isLoading.value = false;
     }
   }
 
@@ -534,79 +934,74 @@ Provide helpful, concise financial advice. Be friendly and supportive.''';
     required double expenses,
     required double income,
   }) async {
-    isLoading.value = true;
-    error.value = '';
-
     try {
-      final response = await _geminiService.getFinancialAdvice(
+      return await _geminiService.getFinancialAdvice(
         balance,
         expenses,
         income,
       );
-      return response;
     } catch (e) {
       error.value = 'Error: $e';
       return null;
-    } finally {
-      isLoading.value = false;
+    }
+  }
+
+  /// Validate if an image is a receipt
+  Future<bool> validateReceiptImage(List<int> imageBytes) async {
+    try {
+      final prompt = '''
+Analyze this image and determine if it is a receipt or transaction document.
+
+A valid receipt should contain:
+- Transaction amounts or prices
+- Date or timestamp
+- Merchant/store name or reference numbers
+- Payment details or transaction type
+
+Respond with ONLY "true" if this is a receipt/transaction document, or "false" if it's not (like a selfie, random photo, screenshot, etc.).
+
+Response (true/false):''';
+
+      final response =
+          await _geminiService.generateContentWithImage(prompt, imageBytes);
+
+      if (response == null) return false;
+
+      final cleanResponse = response.trim().toLowerCase();
+      return cleanResponse.contains('true');
+    } catch (e) {
+      print('Error validating receipt: $e');
+      return false;
     }
   }
 
   /// Analyze receipt image - returns structured data
   Future<Map<String, dynamic>?> analyzeReceiptImage(
       List<int> imageBytes) async {
-    isLoading.value = true;
-    error.value = '';
-
     try {
-      print('📸 Starting receipt image analysis...');
-      final response = await _geminiService.analyzeReceiptImage(imageBytes);
-
-      if (response == null) {
-        print('❌ Service returned null response');
-        error.value = 'Failed to analyze image';
-        return null;
-      }
-
-      if (response.containsKey('error')) {
-        print('⚠️ Response contains error: ${response['error']}');
-        error.value = response['error'].toString();
-        // Still return the response so we can see raw_response if available
-        return response;
-      }
-
-      print('✅ Receipt analysis completed successfully');
-      return response;
+      return await _geminiService.analyzeReceiptImage(imageBytes);
     } catch (e) {
-      print('💥 Exception in analyzeReceiptImage: $e');
       error.value = 'Error: $e';
       return null;
-    } finally {
-      isLoading.value = false;
     }
   }
 
-  /// Extract custom information from image
+  /// Extract custom information from image using custom prompt
   Future<String?> extractCustomInfo(
     List<int> imageBytes,
     List<String> fieldsToExtract, {
     String? additionalInstructions,
   }) async {
-    isLoading.value = true;
-    error.value = '';
-
     try {
-      final response = await _geminiService.extractCustomInformation(
-        imageBytes,
-        fieldsToExtract,
-        additionalInstructions: additionalInstructions,
-      );
-      return response;
+      final prompt = '''
+Extract the following information from this image:
+${fieldsToExtract.map((field) => '- $field').join('\n')}
+
+${additionalInstructions ?? ''}''';
+      return await _geminiService.generateContentWithImage(prompt, imageBytes);
     } catch (e) {
       error.value = 'Error: $e';
       return null;
-    } finally {
-      isLoading.value = false;
     }
   }
 
@@ -615,28 +1010,170 @@ Provide helpful, concise financial advice. Be friendly and supportive.''';
     List<int> imageBytes,
     String requirements,
   ) async {
-    isLoading.value = true;
-    error.value = '';
-
     try {
-      final response = await _geminiService.analyzeDocument(
-        imageBytes,
-        requirements,
-      );
-      return response;
+      return await _geminiService.generateContentWithImage(
+          requirements, imageBytes);
     } catch (e) {
       error.value = 'Error: $e';
       return null;
-    } finally {
-      isLoading.value = false;
     }
+  }
+
+  /// Delete a specific message by index
+  void deleteMessage(int index) {
+    if (index >= 0 && index < chatHistory.length) {
+      chatHistory.removeAt(index);
+      _saveChatHistory();
+    }
+  }
+
+  /// Start a new conversation (saves current to history)
+  void startNewConversation() {
+    // Auto-save current chat to history if there are messages
+    if (chatHistory.isNotEmpty) {
+      _autoSaveChatSession();
+    }
+    chatHistory.clear();
+    currentResponse.value = '';
+    error.value = '';
+    _currentSessionStart = DateTime.now();
+    _saveChatHistory(); // Save empty state
   }
 
   /// Clear chat history
   void clearChat() {
+    // Auto-save current chat before clearing if there are messages
+    if (chatHistory.isNotEmpty) {
+      _autoSaveChatSession();
+    }
     chatHistory.clear();
     currentResponse.value = '';
     error.value = '';
+    _currentSessionStart = null;
+    _saveChatHistory(); // Save empty state
+  }
+
+  /// Auto-save current chat session with date-based title
+  void _autoSaveChatSession() {
+    if (chatHistory.isEmpty) return;
+
+    // Generate title from first user message or use date
+    String title = _generateChatTitle();
+
+    final session = ChatSession(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: title,
+      messages: List.from(chatHistory),
+      savedAt: _currentSessionStart ?? DateTime.now(),
+      messageCount: chatHistory.length,
+    );
+
+    savedChatSessions.insert(0, session);
+  }
+
+  /// Generate a title for the chat session
+  String _generateChatTitle() {
+    // Find first user message
+    final firstUserMessage = chatHistory.firstWhere(
+      (msg) => msg.isUser,
+      orElse: () => chatHistory.first,
+    );
+
+    // Use first 40 characters of first message, or date if too short
+    if (firstUserMessage.text.length > 10) {
+      String title = firstUserMessage.text;
+      if (title.length > 40) {
+        title = '${title.substring(0, 40)}...';
+      }
+      return title;
+    }
+
+    // Fallback to date-based title
+    final now = _currentSessionStart ?? DateTime.now();
+    final dateFormat = DateFormat('MMM dd, yyyy \'at\' h:mm a');
+    return 'Chat - ${dateFormat.format(now)}';
+  }
+
+  /// Save current chat session with custom title (manual save)
+  void saveChatSession(String title) {
+    if (chatHistory.isEmpty) return;
+
+    final session = ChatSession(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: title,
+      messages: List.from(chatHistory),
+      savedAt: _currentSessionStart ?? DateTime.now(),
+      messageCount: chatHistory.length,
+    );
+
+    savedChatSessions.insert(0, session);
+  }
+
+  /// Load a saved chat session
+  void loadChatSession(String sessionId) {
+    final session = savedChatSessions.firstWhere(
+      (s) => s.id == sessionId,
+      orElse: () => throw Exception('Session not found'),
+    );
+
+    chatHistory.clear();
+    chatHistory.addAll(session.messages);
+  }
+
+  /// Delete a saved chat session
+  void deleteChatSession(String sessionId) {
+    savedChatSessions.removeWhere((s) => s.id == sessionId);
+  }
+
+  /// Save chat history to persistent storage
+  Future<void> _saveChatHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = _appController.currentUserId.value;
+
+      if (userId.isEmpty) return;
+
+      // Convert chat history to JSON
+      final chatData = chatHistory
+          .map((msg) => {
+                'text': msg.text,
+                'isUser': msg.isUser,
+                'timestamp': msg.timestamp.millisecondsSinceEpoch,
+              })
+          .toList();
+
+      await prefs.setString('chat_history_$userId', jsonEncode(chatData));
+    } catch (e) {
+      print('Error saving chat history: $e');
+    }
+  }
+
+  /// Load chat history from persistent storage
+  Future<void> _loadChatHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = _appController.currentUserId.value;
+
+      if (userId.isEmpty) return;
+
+      final chatData = prefs.getString('chat_history_$userId');
+      if (chatData == null) return;
+
+      final List<dynamic> decodedData = jsonDecode(chatData);
+      final loadedMessages = decodedData
+          .map((msg) => ChatMessage(
+                text: msg['text'] as String,
+                isUser: msg['isUser'] as bool,
+                timestamp: DateTime.fromMillisecondsSinceEpoch(
+                    msg['timestamp'] as int),
+              ))
+          .toList();
+
+      chatHistory.clear();
+      chatHistory.addAll(loadedMessages);
+    } catch (e) {
+      print('Error loading chat history: $e');
+    }
   }
 }
 
@@ -653,14 +1190,31 @@ class ChatMessage {
   });
 }
 
+/// Model for saved chat sessions
+class ChatSession {
+  final String id;
+  final String title;
+  final List<ChatMessage> messages;
+  final DateTime savedAt;
+  final int messageCount;
+
+  ChatSession({
+    required this.id,
+    required this.title,
+    required this.messages,
+    required this.savedAt,
+    required this.messageCount,
+  });
+}
+
 /// Action types that AI can request
 enum ActionType {
   deleteTransaction,
-  updateTransaction,
   updateFeeRange,
   clearAllTransactions,
   deleteByRecipient,
-  clearChat
+  clearChat,
+  saveTransaction
 }
 
 /// Simple action request model used for confirmation flow
