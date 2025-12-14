@@ -202,6 +202,29 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
                                   widget.imageFile,
                                   width: double.infinity,
                                   fit: BoxFit.cover,
+                                  frameBuilder: (context, child, frame,
+                                      wasSynchronouslyLoaded) {
+                                    if (wasSynchronouslyLoaded) {
+                                      return child;
+                                    }
+                                    return AnimatedSwitcher(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      child: frame != null
+                                          ? child
+                                          : Container(
+                                              height: 300,
+                                              color: colorScheme
+                                                  .surfaceContainerHighest,
+                                              child: Center(
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  color: colorScheme.primary,
+                                                ),
+                                              ),
+                                            ),
+                                    );
+                                  },
                                   errorBuilder: (context, error, stackTrace) {
                                     return Container(
                                       height: 300,
@@ -1171,14 +1194,67 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
                   child: Image.file(
                     widget.imageFile,
                     fit: BoxFit.contain,
+                    frameBuilder:
+                        (context, child, frame, wasSynchronouslyLoaded) {
+                      if (wasSynchronouslyLoaded) {
+                        return child;
+                      }
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: frame != null
+                            ? child
+                            : Container(
+                                color: Colors.black,
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[900],
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.broken_image_rounded,
+                                size: 64,
+                                color: Colors.white54,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Unable to load image',
+                                style: AppText.poppins(
+                                  color: Colors.white54,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Error: $error',
+                                style: AppText.poppins(
+                                  color: Colors.white38,
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
               // Close button
-              SafeArea(
-                child: Positioned(
-                  top: 16,
-                  right: 16,
+              Positioned(
+                top: 16,
+                right: 16,
+                child: SafeArea(
                   child: GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
@@ -1197,11 +1273,11 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
                 ),
               ),
               // Instructions
-              SafeArea(
-                child: Positioned(
-                  bottom: 24,
-                  left: 0,
-                  right: 0,
+              Positioned(
+                bottom: 24,
+                left: 0,
+                right: 0,
+                child: SafeArea(
                   child: Center(
                     child: Container(
                       padding: const EdgeInsets.symmetric(

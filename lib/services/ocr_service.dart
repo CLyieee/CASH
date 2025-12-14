@@ -8,6 +8,18 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart';
 import 'gemini_service.dart';
 
+/// OCRService - Standalone OCR with intelligent GCash receipt structure detection
+///
+/// GCASH RECEIPT STRUCTURE:
+/// Understands the standard GCash receipt layout:
+/// 1. Recipient Name (top section) - masked format like "JE....Y Z." or full name
+/// 2. Phone Number (below name) - format: +63 XXX XXX XXXX
+/// 3. Service indicator - "Sent via GCash"
+/// 4. Amount section - labeled "Amount" with value
+/// 5. Total display - "Total Amount Sent ₱XXX.XX"
+/// 6. Reference section (bottom) - "Ref No." with number and date/time
+///
+/// Extracts data based on text positioning and structure patterns.
 class OCRService {
   TextRecognizer? _textRecognizer;
   final GeminiService _geminiService = GeminiService();
@@ -288,6 +300,9 @@ class OCRService {
   }
 
   // Process receipt using Gemini AI for text extraction on web, then use OCR logic
+  // NOTE: For GCash receipts with colored boxes (yellow, blue, red), Gemini AI
+  // in gemini_service.dart is better equipped to identify and extract data from
+  // the colored regions. This method is mainly for simple text extraction.
   Future<ReceiptModel?> _processReceiptWithGemini(
     File imageFile,
     List<FeeRange> feeRanges,
@@ -305,6 +320,8 @@ class OCRService {
       print('✅ Read ${imageBytes.length} bytes from image');
 
       // Use Gemini to extract ALL text from the image
+      // For GCash receipts with colored boxes, the analyzeReceiptImage method
+      // in GeminiService provides better extraction with color-box detection
       const prompt = '''
 Extract ALL text from this receipt image. 
 Output ONLY the text exactly as it appears, line by line.
@@ -356,24 +373,24 @@ Just output the raw text content.
   }
 
   // Convert Gemini AI result to ReceiptModel
-  // Normalize name masking characters - convert all bullets/dots to asterisks
-  String _normalizeMaskingCharacters(String name) {
-    // Convert all bullets (•) and dots (.) to asterisks (*)
-    // This preserves the exact count: MA•S B. -> MA*S B., MA......S B. -> MA******S B.
-    String normalized = name.replaceAll('•', '*');
 
-    // Only replace dots that are NOT at the end (preserve ending period)
-    if (normalized.endsWith('.')) {
+  // Convert all masking characters (asterisks and dots) to bullets for consistency
+  String _convertMaskingToBullets(String name) {
+    // Convert asterisks (*) to bullets (•)
+    String converted = name.replaceAll('*', '•');
+
+    // Convert dots (.) to bullets (•), but preserve the final dot at the end
+    if (converted.endsWith('.')) {
       // Replace all dots except the last one
-      final withoutEnd = normalized.substring(0, normalized.length - 1);
-      final endDot = normalized.substring(normalized.length - 1);
-      normalized = withoutEnd.replaceAll('.', '*') + endDot;
+      final withoutEnd = converted.substring(0, converted.length - 1);
+      final endDot = converted.substring(converted.length - 1);
+      converted = withoutEnd.replaceAll('.', '•') + endDot;
     } else {
       // No ending period, replace all dots
-      normalized = normalized.replaceAll('.', '*');
+      converted = converted.replaceAll('.', '•');
     }
 
-    return normalized;
+    return converted;
   }
 
   // Clean receipt text by removing promotional and UI noise
@@ -452,6 +469,190 @@ Just output the raw text content.
     return cleanedLines.join('\n');
   }
 
+  // Detect GCash receipt structure pattern
+  // GCash receipts have a specific layout:
+  // 1. Recipient name at top (may be masked like "JE....Y Z.")
+  // 2. Phone number below name
+  // 3. "Sent via GCash" indicator
+  // 4. "Amount" section with value
+  // 5. "Total Amount Sent" display
+  // 6. "Ref No." with reference number and date at bottom
+  bool _isGCashStructuredReceipt(List<String> lines) {
+    // Check for GCash receipt indicators
+    final text = lines.join('\n').toLowerCase();
+    if (!text.contains('gcash') && !text.contains('sent via gcash')) {
+      return false;
+    }
+
+    // Check if we have the typical GCash receipt structure:
+    // - A name pattern near the top
+    // - A phone number below it
+    // - Amount labeled section
+    // - Ref number at bottom
+    int nameLineIndex = -1;
+    int phoneLineIndex = -1;
+    int amountLineIndex = -1;
+    int refLineIndex = -1;
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].toLowerCase();
+
+      // Name pattern (masked like "JE....Y Z." or full name)
+      if (nameLineIndex == -1 &&
+          RegExp(r'^[A-Za-z]{2}[A-Za-z•*\.\s]{2,10}[A-Za-z]\.?$')
+              .hasMatch(lines[i])) {
+        nameLineIndex = i;
+      }
+
+      // Phone pattern
+      if (phoneLineIndex == -1 &&
+          RegExp(r'\+?63\s*\d{3}\s*\d{3}\s*\d{4}').hasMatch(lines[i])) {
+        phoneLineIndex = i;
+      }
+
+      // Amount section
+      if (amountLineIndex == -1 && line.contains('amount')) {
+        amountLineIndex = i;
+      }
+
+      // Ref number section
+      if (refLineIndex == -1 &&
+          (line.contains('ref') || line.contains('reference'))) {
+        refLineIndex = i;
+      }
+    }
+
+    // If we have name -> phone -> amount -> ref in that order, it's a standard GCash receipt
+    final hasStructure = nameLineIndex >= 0 &&
+        phoneLineIndex > nameLineIndex &&
+        amountLineIndex > phoneLineIndex &&
+        refLineIndex > amountLineIndex;
+
+    if (hasStructure) {
+      print('📱 Detected standard GCash receipt structure!');
+    }
+
+    return hasStructure;
+  }
+
+  // Extract data from standard GCash receipt structure
+  Map<String, String?> _extractFromGCashStructure(List<String> lines) {
+    print('📱 Extracting data from GCash receipt structure...');
+
+    String? recipientName;
+    String? phoneNumber;
+    String? amount;
+    String? refNumber;
+    String? dateStr;
+
+    // SECTION 1 (TOP) - Recipient Name
+    // Look for name pattern in first 10-15 lines (before "sent via gcash")
+    for (int i = 0; i < lines.length && i < 15; i++) {
+      final line = lines[i].trim();
+      if (line.toLowerCase().contains('sent via') ||
+          line.toLowerCase().contains('gcash') ||
+          line.toLowerCase().contains('amount')) {
+        break; // Stop at service name or amount section
+      }
+
+      // Match name patterns: "JE....Y Z." (dots), "MA****N M." (asterisks), or full names
+      if (RegExp(r'^[A-Za-z]{2}[A-Za-z•*\.\s]{1,10}[A-Za-z]{1,2}\.?$')
+          .hasMatch(line)) {
+        recipientName = _convertMaskingToBullets(line);
+        print('📋 [Top Section] Recipient Name: "$recipientName"');
+        break;
+      }
+    }
+
+    // SECTION 2 - Phone Number (below recipient name)
+    // Look for phone right after name or before amount section
+    for (int i = 0; i < lines.length && i < 20; i++) {
+      final line = lines[i];
+      if (RegExp(r'\+?63\s*\d{3}\s*\d{3}\s*\d{4}|0\d{3}\s*\d{3}\s*\d{4}')
+          .hasMatch(line)) {
+        final match =
+            RegExp(r'\+?63\s*\d{3}\s*\d{3}\s*\d{4}|0\d{3}\s*\d{3}\s*\d{4}')
+                .firstMatch(line);
+        if (match != null) {
+          phoneNumber = match.group(0);
+          print('📞 [Below Name] Phone Number: "$phoneNumber"');
+          break;
+        }
+      }
+    }
+
+    // SECTION 3 - Amount (in "Amount" section)
+    // Look for "Amount" label followed by the value
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].toLowerCase();
+      if (line.contains('amount') && !line.contains('total')) {
+        // Amount value is usually on the same line or next line
+        final amountMatch =
+            RegExp(r'[P₱]?\s*[\d,]+\.\d{2}').firstMatch(lines[i]);
+        if (amountMatch != null) {
+          amount = amountMatch.group(0);
+          print('💰 [Amount Section] Amount: "$amount"');
+          break;
+        } else if (i + 1 < lines.length) {
+          final nextMatch =
+              RegExp(r'[P₱]?\s*[\d,]+\.\d{2}').firstMatch(lines[i + 1]);
+          if (nextMatch != null) {
+            amount = nextMatch.group(0);
+            print('💰 [Amount Section] Amount: "$amount"');
+            break;
+          }
+        }
+      }
+    }
+
+    // SECTION 4 (BOTTOM) - Reference Number & Date
+    // Look for "Ref No" section, usually near bottom
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].toLowerCase();
+      if (line.contains('ref') &&
+          (line.contains('no') || line.contains('number'))) {
+        // Ref number is usually on same line or next line
+        final refMatch =
+            RegExp(r'\d{4}\s+\d{3}\s+\d{6,9}|\d{10,20}').firstMatch(lines[i]);
+        if (refMatch != null) {
+          refNumber = refMatch.group(0);
+          print('🔢 [Bottom Section] Ref Number: "$refNumber"');
+        } else if (i + 1 < lines.length) {
+          final nextMatch = RegExp(r'\d{4}\s+\d{3}\s+\d{6,9}|\d{10,20}')
+              .firstMatch(lines[i + 1]);
+          if (nextMatch != null) {
+            refNumber = nextMatch.group(0);
+            print('🔢 [Bottom Section] Ref Number: "$refNumber"');
+          }
+        }
+
+        // Date is usually on same line or right after ref number
+        final datePattern = RegExp(
+            r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s*\d{4}\s+\d{1,2}:\d{2}\s*(AM|PM)',
+            caseSensitive: false);
+
+        // Check current line and next few lines
+        for (int j = i; j < lines.length && j < i + 3; j++) {
+          final dateMatch = datePattern.firstMatch(lines[j]);
+          if (dateMatch != null) {
+            dateStr = dateMatch.group(0);
+            print('📅 [Bottom Section] Date: "$dateStr"');
+            break;
+          }
+        }
+        break;
+      }
+    }
+
+    return {
+      'recipientName': recipientName,
+      'phoneNumber': phoneNumber,
+      'amount': amount,
+      'refNumber': refNumber,
+      'dateStr': dateStr,
+    };
+  }
+
   // Normalize and structure OCR text into consistent format
   String _normalizeReceiptText(String rawText) {
     // Filter out noise and promotional text first
@@ -462,6 +663,43 @@ Just output the raw text content.
         .map((l) => l.trim())
         .where((l) => l.isNotEmpty)
         .toList();
+
+    // 📱 CHECK FOR STANDARD GCASH RECEIPT STRUCTURE FIRST
+    final isGCashStructured = _isGCashStructuredReceipt(lines);
+    if (isGCashStructured) {
+      final gcashData = _extractFromGCashStructure(lines);
+
+      // If we successfully extracted from GCash structure, use that data
+      if (gcashData['recipientName'] != null ||
+          gcashData['phoneNumber'] != null ||
+          gcashData['amount'] != null) {
+        print('✅ Using GCash structure extraction results');
+
+        // Build normalized text with GCash structure data
+        final normalized = StringBuffer();
+        normalized.writeln('--- GCASH RECEIPT ---');
+        if (gcashData['recipientName'] != null) {
+          normalized.writeln('Recipient: ${gcashData['recipientName']}');
+        }
+        if (gcashData['phoneNumber'] != null) {
+          normalized.writeln('Phone: ${gcashData['phoneNumber']}');
+        }
+        if (gcashData['amount'] != null) {
+          normalized.writeln('Amount: ${gcashData['amount']}');
+        }
+        if (gcashData['refNumber'] != null) {
+          normalized.writeln('Ref No: ${gcashData['refNumber']}');
+        }
+        if (gcashData['dateStr'] != null) {
+          normalized.writeln('Date: ${gcashData['dateStr']}');
+        }
+        normalized.writeln('--- END RECEIPT ---');
+        normalized.writeln('\nORIGINAL TEXT:');
+        normalized.writeln(rawText);
+
+        return normalized.toString();
+      }
+    }
 
     // Define field patterns and their normalized keys
     final fieldMappings = {
@@ -523,8 +761,7 @@ Just output the raw text content.
             !RegExp(r'(reference|amount|total|date|fee|schedule|no\.)',
                     caseSensitive: false)
                 .hasMatch(prevLine)) {
-          recipientName = prevLine.endsWith('.') ? prevLine : '$prevLine.';
-          recipientName = _normalizeMaskingCharacters(recipientName);
+          recipientName = _convertMaskingToBullets(prevLine);
           print(
               '✅ [Normalization] Found recipient BEFORE phone: "$recipientName"');
           break;
@@ -543,9 +780,7 @@ Just output the raw text content.
           !RegExp(r'(gcash|via|sent|transfer|amount|fee|total|ref)',
                   caseSensitive: false)
               .hasMatch(line)) {
-        // Add dot if missing
-        recipientName = line.endsWith('.') ? line : '$line.';
-        recipientName = _normalizeMaskingCharacters(recipientName);
+        recipientName = _convertMaskingToBullets(line);
         print('✅ [Normalization] Found recipient: "$recipientName"');
       }
 
@@ -1000,7 +1235,7 @@ Just output the raw text content.
             caseSensitive: true);
         if (maskedPattern.hasMatch(line)) {
           final normalized =
-              _normalizeMaskingCharacters(line.endsWith('.') ? line : '$line.');
+              _convertMaskingToBullets(line.endsWith('.') ? line : '$line.');
           print('✅ Smart extraction found bullet-dot name: "$normalized"');
           return normalized;
         }
@@ -1024,7 +1259,7 @@ Just output the raw text content.
         final wordCount = line.split(RegExp(r'\s+')).length;
         if (wordCount >= 1 && wordCount <= 5) {
           final normalized =
-              _normalizeMaskingCharacters(line.endsWith('.') ? line : '$line.');
+              _convertMaskingToBullets(line.endsWith('.') ? line : '$line.');
           print('✅ Smart extraction found name: "$normalized"');
           return normalized;
         }
@@ -1039,7 +1274,7 @@ Just output the raw text content.
       final name = maskedMatch.group(0)!.trim();
       if (name.length >= 4) {
         final normalized =
-            _normalizeMaskingCharacters(name.endsWith('.') ? name : '$name.');
+            _convertMaskingToBullets(name.endsWith('.') ? name : '$name.');
         print('✅ Smart extraction found masked name: "$normalized"');
         return normalized;
       }
@@ -1063,7 +1298,7 @@ Just output the raw text content.
                 .hasMatch(name)) {
           print('✅ Smart extraction found labeled name: "$name"');
           final normalized =
-              _normalizeMaskingCharacters(name.endsWith('.') ? name : '$name.');
+              _convertMaskingToBullets(name.endsWith('.') ? name : '$name.');
           return normalized;
         }
       }
@@ -1332,7 +1567,7 @@ Just output the raw text content.
                 .hasMatch(name)) {
           print('✅ Found recipient name (Pattern match): "$name"');
           final normalized =
-              _normalizeMaskingCharacters(name.endsWith('.') ? name : '$name.');
+              _convertMaskingToBullets(name.endsWith('.') ? name : '$name.');
           return normalized;
         }
       }
@@ -1360,7 +1595,7 @@ Just output the raw text content.
                   !RegExp(r'(GCash|Amount|Via)', caseSensitive: false)
                       .hasMatch(name)) {
                 print('✅ Found recipient name (Before phone): "$name"');
-                final normalized = _normalizeMaskingCharacters(
+                final normalized = _convertMaskingToBullets(
                     name.endsWith('.') ? name : '$name.');
                 return normalized;
               }
@@ -1380,7 +1615,7 @@ Just output the raw text content.
                   !RegExp(r'(GCash|Amount|Via)', caseSensitive: false)
                       .hasMatch(name)) {
                 print('✅ Found recipient name (After phone): "$name"');
-                final normalized = _normalizeMaskingCharacters(
+                final normalized = _convertMaskingToBullets(
                     name.endsWith('.') ? name : '$name.');
                 return normalized;
               }
@@ -1408,7 +1643,7 @@ Just output the raw text content.
                 .hasMatch(name)) {
           print('✅ Found recipient name (Label match): "$name"');
           final normalized =
-              _normalizeMaskingCharacters(name.endsWith('.') ? name : '$name.');
+              _convertMaskingToBullets(name.endsWith('.') ? name : '$name.');
           return normalized;
         }
       }
@@ -1431,7 +1666,7 @@ Just output the raw text content.
           name.length <= 50) {
         print('✅ Found recipient name (Full name): "$name"');
         final normalized =
-            _normalizeMaskingCharacters(name.endsWith('.') ? name : '$name.');
+            _convertMaskingToBullets(name.endsWith('.') ? name : '$name.');
         return normalized;
       }
     }

@@ -5,6 +5,17 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import '../models/receipt_model.dart';
 import '../config/api_keys.dart';
 
+/// GeminiService - AI-powered receipt image analysis
+///
+/// GCASH RECEIPT STRUCTURE UNDERSTANDING:
+/// This service understands the standard GCash receipt layout:
+/// - TOP SECTION: Recipient Name (may be masked with dots/asterisks)
+/// - BELOW NAME: Phone Number (+63 format)
+/// - MIDDLE: Service indicator ("Sent via GCash") and Amount section
+/// - BOTTOM: Reference Number ("Ref No.") and Date/Time
+///
+/// The AI analyzes text positioning and labels to accurately extract
+/// transaction data from various receipt formats.
 class GeminiService {
   // API key is now stored in lib/config/api_keys.dart
   // Make sure to add that file to .gitignore!
@@ -144,18 +155,103 @@ FIRST: Look at the TITLE/HEADER of the receipt!
 
 DO NOT SKIP THIS STEP! The title tells you which format to use!
 
-🔍 STEP 1: READ ALL TEXT FIRST (CRITICAL!)
+📍📍📍 GCASH RECEIPT STRUCTURE (DATA LOCATION GUIDE) 📍📍📍
+For GCash receipts, data appears in a specific layout pattern:
+
+📍 TOP SECTION = RECIPIENT NAME
+- The recipient's name appears at the TOP of the receipt
+- May be masked with dots like "JE....Y Z." or asterisks like "MA****N M."
+- Could also be a full name
+- This is the FIRST piece of identifying information
+- Example: "JE....Y Z.", "MA****N M.", "JOHN DOE"
+
+📍 BELOW NAME = PHONE NUMBER
+- The phone number appears BELOW the recipient name
+- Format: +63 XXX XXX XXXX or similar
+- Usually a few lines after the name
+- Example: "+63 991 818 3871"
+
+📍 MIDDLE SECTION = AMOUNT
+- After "Sent via GCash" text, you'll find the amount
+- Labeled as "Amount" with the numeric value
+- May also show "Total Amount Sent" with the full amount including currency symbol
+- Example: "Amount 150.00" or "Total Amount Sent ₱150.00"
+
+📍 BOTTOM SECTION = REFERENCE NUMBER & DATE
+- At the BOTTOM of the receipt, find the reference information
+- Contains TWO pieces of data:
+  1. Reference Number (labeled "Ref No." followed by a long number)
+  2. Date and Time (formatted like "Dec 05, 2025 9:59 PM")
+- Example: "Ref No. 5035 443 457020" and "Dec 05, 2025 9:59 PM"
+
+🔍 STEP 1: UNDERSTAND THE LAYOUT!
 Before extracting any fields, you MUST:
-1. Read the TITLE at the top (Bank Transfer Complete? Send Money?)
-2. Read EVERY piece of text visible in the image
+1. Identify the RECEIPT TYPE (GCash, bank transfer, etc.)
+2. Understand the STRUCTURE:
+   - Top = Recipient info (name + phone)
+   - Middle = Transaction details (amount, service)
+   - Bottom = Reference info (ref number + date)
+3. Read the text in EACH SECTION sequentially
+4. Extract data based on POSITION and LABELS
+
+🔍 STEP 2: READ ALL TEXT (CRITICAL!)
+After understanding the layout, read:
+1. The TITLE at the top (Bank Transfer Complete? Send Money?)
+2. EVERY piece of text visible in the image
 3. List out ALL text you can see, organized by sections
-4. Identify what type of document this is (BANK or MONEY transfer)
-5. Understand the layout and structure
+4. Understand the layout and structure
 
 This ensures accuracy - you can't extract what you haven't read yet!
 
 🔍 STEP 2: THEN EXTRACT SPECIFIC FIELDS
 After reading all text and identifying the type, extract the required transaction details.
+
+═══════════════════════════════════════════════════════════════
+📱 GCASH RECEIPT STRUCTURE (VISUAL LAYOUT GUIDE)
+═══════════════════════════════════════════════════════════════
+
+For GCash paper receipts and digital receipts, data follows this structure:
+
+VISUAL LAYOUT:
+┌─────────────────────────────────┐
+│  ✓ [Checkmark at top]          │
+│                                 │
+│  ━━━ TOP SECTION ━━━           │
+│  JE....Y Z.                     │ ← RECIPIENT NAME (masked or full)
+│                                 │
+│  +63 991 818 3871               │ ← PHONE NUMBER (below name)
+│                                 │
+│  ━━━ MIDDLE SECTION ━━━         │
+│  Sent via GCash                 │ ← Service indicator
+│                                 │
+│  Amount      150.00             │ ← AMOUNT (labeled section)
+│                                 │
+│  Total Amount Sent  ₱150.00     │ ← Total display
+│                                 │
+│  ━━━ BOTTOM SECTION ━━━         │
+│  Ref No. 5035 443 457020        │ ← REFERENCE NUMBER
+│  Dec 05, 2025 9:59 PM           │ ← DATE AND TIME
+│                                 │
+│  [Carbon footprint info]        │
+└─────────────────────────────────┘
+
+EXTRACTION STRATEGY FOR GCASH RECEIPTS:
+1. IDENTIFY sections: Top (recipient info), Middle (transaction), Bottom (reference)
+2. READ text in SEQUENTIAL ORDER from top to bottom
+3. MATCH text position to data type:
+   - Top Section = Recipient Name + Phone Number
+   - Middle Section = Service Name + Amount
+   - Bottom Section = Reference Number + Date/Time
+4. EXTRACT text based on LABELS and POSITION
+5. IGNORE promotional text (carbon footprint, etc.)
+
+⚠️ IMPORTANT NOTES:
+- The layout follows a consistent TOP → MIDDLE → BOTTOM structure
+- Text POSITION and LABELS are key indicators
+- Name comes BEFORE phone number
+- Amount appears after "Sent via GCash"
+- Ref number is near the BOTTOM with date/time
+- This structure is consistent across GCash paper and digital receipts
 
 ═══════════════════════════════════════════════════════════════
 
@@ -222,14 +318,25 @@ SENDER/RECIPIENT NAME - INTELLIGENT EXTRACTION:
 
 ⚠️ CRITICAL: DO NOT assume the name is in a specific position!
 
+📍 PRIORITY 1: CHECK TOP SECTION FOR NAME!
+For GCash receipts:
+- The recipient name appears at the TOP of the receipt
+- It's the FIRST piece of identifying information (before phone number)
+- Usually in the first 5-10 lines of text
+- May be masked with dots: "JE....Y Z." or asterisks: "MA****N M."
+- Could be a full name in some cases
+- Extract the exact text from this top position
+- Example: "JE....Y Z.", "MA****N M.", "JOHN D."
+
 STEP 1: READ ALL TEXT IN THE IMAGE
 - Read every word, label, and text fragment
 - Don't skip anything
+- Pay special attention to text INSIDE colored boxes
 
 STEP 2: IDENTIFY NAME PATTERNS
 Look for text that matches these patterns ANYWHERE in the image:
-- GCASH MASKED NAMES: "CL*****M M.", "MA****N M.", "JO••••A D.", "AN***A L." 
-  (2 letters + asterisks/dots + 1 letter + space + middle initial)
+- GCASH MASKED NAMES: "CL*****M M.", "MA****N M.", "JO••••A D.", "AN***A L.", "JE....Y Z."
+  (2 letters + asterisks/dots/periods + 1 letter + space + middle initial)
 - FULL NAMES: "MARIA CLARA CRUZ", "JUAN DELA CRUZ", "Maria Cruz"
 - ABBREVIATED: "M. CRUZ", "J. SANTOS", "Maria C."
 - Any combination of letters that looks like a person's name
@@ -240,13 +347,16 @@ Look for labels NEAR the name text:
 - "Account Name:", "Payee:", "Name:", "Customer:", "Client:"
 - Profile icons, avatars, or person symbols
 - Text in cards, boxes, or prominent sections
+- Text at the TOP of the receipt (before phone number)
 
 STEP 4: VERIFY IT'S A NAME
 - Does it look like a person's name? (not a company, app name, or service)
 - Is it near a phone number or amount? (names usually appear with these)
 - Is it in a recipient/beneficiary context?
+- Is it at the TOP of the receipt? (strong indicator for GCash)
 
 ⚠️ IMPORTANT:
+- For GCash receipts, CHECK TOP SECTION FIRST!
 - The name could be ANYWHERE: top, middle, bottom, left, right
 - It could be BEFORE or AFTER the label
 - It could be on a DIFFERENT LINE from the label
@@ -257,18 +367,29 @@ PHONE NUMBER - INTELLIGENT EXTRACTION:
 
 ⚠️ CRITICAL: DO NOT assume the phone number is in a specific position!
 
+📍 PRIORITY 1: CHECK BELOW THE NAME!
+For GCash receipts:
+- The phone number appears BELOW the recipient name
+- Usually within 2-5 lines after the name
+- This is the PRIMARY location for the phone number in GCash receipts
+- Located before the "Sent via GCash" text
+- Extract the number from this position
+- Example: "+63 991 818 3871", "09171234567"
+
 STEP 1: SCAN FOR NUMBER PATTERNS
 Look for sequences that match phone number patterns ANYWHERE in the image:
 - 11 digits: 09171234567
 - With country code: +63 917 123 4567
 - With formatting: 0917-123-4567, (0917) 123-4567
-- Starting with: 0, +63, 63
+- Located BELOW the recipient name (GCash structure
+- INSIDE a blue colored box (GCash indicator)
 
 STEP 2: IDENTIFY CONTEXT CLUES
 Look for labels NEAR the number:
 - "Mobile:", "Phone:", "Contact:", "Mobile Number:", "Phone Number:"
 - "Cell:", "Tel:", "Telephone:", "Mobile No:", "Contact Number:"
 - Phone icon symbols
+- Position BELOW recipient name (especially for GCash)
 
 STEP 3: DISTINGUISH FROM OTHER NUMBERS
 - Phone numbers are typically 10-13 digits (with country code)
@@ -286,6 +407,7 @@ Accept any of these formats:
 - 63 915 609 1737
 
 ⚠️ IMPORTANT:
+- For GCash receipts, CHECK BELOW THE NAME FIRST!
 - Phone number could be ANYWHERE in the image
 - Could be BEFORE, AFTER, or WITHOUT a label
 - Could be ABOVE or BELOW the name
@@ -296,19 +418,31 @@ AMOUNT - INTELLIGENT EXTRACTION:
 
 ⚠️ CRITICAL: DO NOT assume the amount is in a specific position!
 
+📍 PRIORITY 1: CHECK THE AMOUNT SECTION!
+For GCash receipts:
+- Look for the "Amount" label in the MIDDLE section
+- Usually appears after "Sent via GCash" text
+- The amount value follows the "Amount" label
+- May also show as "Total Amount Sent" with currency symbol
+- This is the PRIMARY location for the amount in GCash receipts
+- Extract the numeric value from this section
+- Example: "150.00", "1,400.00", "5000"
+
 STEP 1: SCAN FOR MONETARY VALUES
 Look for numbers that represent money ANYWHERE in the image:
 - Numbers with commas: 1,400.00, 5,000, 10,500.50
 - Numbers with currency: ₱1,400, PHP 1400, Php1,400.00
 - Plain numbers that could be money: 1400, 5000.00
-- Large prominent numbers (often the amount)
+- Large prafter "Amount" or "Total Amount Sent" labels (GCash structure
+- Numbers INSIDE red colored boxes (GCash indicator)
 
 STEP 2: IDENTIFY CONTEXT CLUES
 Look for labels NEAR monetary values:
 - "Amount:", "Send Amount:", "Transfer Amount:", "Principal Amount:"
 - "₱", "PHP", "Php", "Pesos"
 - Labels that indicate this is the main transaction value
-- NOT labels like "Total", "Fee", "Charge" (those are different fields)
+- Located in the MIDDLE section after service nameharge" (those are different fields)
+- Text INSIDE red colored rectangles (especially for GCash)
 
 STEP 3: DISTINGUISH FROM OTHER NUMBERS
 - Amount is the MAIN money being sent/transferred
@@ -323,8 +457,10 @@ Accept any of these formats:
 - PHP 1400 → extract: 1400.00
 - 1,400 → extract: 1400.00
 - 1400.00 → extract: 1400.00
+- After "Amount" label: "Amount 150.00" → extract: 150.00
 
 ⚠️ IMPORTANT:
+- For GCash receipts, CHECK "Amount" SECTION FIRST!
 - Amount could be ANYWHERE: top, middle, bottom, center
 - Could be the LARGEST number, or just a regular number
 - Could be in BOLD, regular, or any formatting
@@ -671,14 +807,25 @@ REFERENCE NUMBER - INTELLIGENT EXTRACTION:
 ⚠️ CRITICAL: DO NOT assume the reference number is in a specific position!
 ⚠️ CRITICAL: Reference numbers can be ALPHANUMERIC (numbers + letters)!
 
+📍 PRIORITY 1: CHECK THE BOTTOM SECTION!
+For GCash receipts:
+- Look for "Ref No." label at the BOTTOM of the receipt
+- The reference number appears after this label
+- Usually one of the last pieces of information on the receipt
+- This is the PRIMARY location for the reference number in GCash receipts
+- The date/time often appears in the same section
+- Extract the exact number after "Ref No." from the bottom
+- Example: "Ref No. 5035 443 457020", "Ref No. 803512902111S"
+
 STEP 1: SCAN FOR LONG NUMBERS/CODES
 Look for alphanumeric sequences that could be references ANYWHERE:
 - Numbers with trailing letters: 803512902111S, 1234567890A, 9876543210AB
-- Long numbers: 5034322274670, 1234567890123
-- With spaces: 5034 322 274670, 1234 5678 9012
+- Long numbers: 5034322274670, 1234567890123, 5035 443 457020
+- With spaces: 5034 322 274670, 1234 5678 9012, 5035 443 457020
 - With dashes: 5034-322-274670, ABC-1234-5678
 - Alphanumeric: GC12345678, TXN9876543210, REF-2024-001
-- Typically 10-20 characters long
+- Located at BOTTOM section of receipt (GCash structure
+- INSIDE yellow/orange colored boxes (GCash indicator)
 
 STEP 2: IDENTIFY CONTEXT CLUES (40+ variations)
 Look for ANY of these labels NEAR the alphanumeric code:
@@ -694,11 +841,12 @@ Look for ANY of these labels NEAR the alphanumeric code:
 - Serial No., Serial Number, Batch No., Batch Number
 
 **Label could be:**
-- BEFORE the number: "Ref No: 803512902111S"
+- BEFORE the number: "Ref No: 803512902111S", "Ref No. 5035 443 457020"
 - AFTER the number: "803512902111S (Ref)"
 - ABOVE the number (different line)
 - BELOW the number (different line)
-- Far away but related by context
+- At the BOTTOM of the receipt
+- INSIDE a yellow/orange colored box (GCash)
 
 STEP 3: DISTINGUISH FROM OTHER DATA
 - Reference numbers are LONGER than phone numbers (10-20 chars vs 11 digits)
@@ -712,10 +860,12 @@ STEP 3: DISTINGUISH FROM OTHER DATA
 STEP 4: EXTRACT EXACTLY AS SHOWN
 - Keep ALL characters: letters, numbers, spaces, dashes
 - Include trailing letters: "803512902111S" not "803512902111"
-- Maintain exact formatting: "5034 322 274670" not "5034322274670"
-- Include any prefix: "GC-" or "TXN-" or "REF-"
+- Maintain exact formatting: "5034 322 274670" or "5035 443 457020"
+- Incat bottom with "Ref No." label, prioritize that value
 
 ⚠️ IMPORTANT:
+- For GCash receipts, CHECK BOTTOM SECTION
+- For GCash receipts, CHECK YELLOW/ORANGE BOTTOM BOX FIRST!
 - Reference number could be ANYWHERE in the image
 - Could be at TOP, MIDDLE, BOTTOM, or any section
 - Label might be FAR from the actual number
@@ -727,23 +877,36 @@ STEP 4: EXTRACT EXACTLY AS SHOWN
 DATE AND TIME - INTELLIGENT EXTRACTION:
 
 ⚠️ CRITICAL: DO NOT assume the date/time is in a specific position!
+📍 PRIORITY 1: CHECK THE BOTTOM SECTION!
+For GCash receipts:
+- Look for the date/time at the BOTTOM of the receipt
+- Usually appears in the SAME SECTION as the "Ref No."
+- The date/time often appears on the SAME line or BELOW the reference number
+- Format examples: "Dec 05, 2025 9:59 PM", "Nov 04, 2025 10:31 AM"
+- This is one of the LAST pieces of information on the receipt
+- Extract the date and time from this bottom section
+- Example: "Dec 05, 2025 9:59 PM" from the bottom areattom box
+- Example: "Dec 05, 2025 9:59 PM" from the bottom yellow box
 
 STEP 1: SCAN FOR DATE/TIME PATTERNS
 Look for date and time formats ANYWHERE in the image:
-- Full format: "Nov 04, 2025 10:31 AM", "November 14, 2025 3:45 PM"
+- Full format: "Nov 04, 2025 10:31 AM", "December 05, 2025 9:59 PM"
 - Date only: "11/04/2025", "2025-11-14", "14/11/2025"
 - Relative: "today", "just now", "yesterday", "a few minutes ago"
-- Separate: "Nov 04, 2025" on one line, "10:31 AM" on another
+- At BOTTOM section near reference number (GCash structure another
 - Timestamps: "14-11-2025 15:30", "2025.11.14 3:45 PM"
+- INSIDE yellow/orange colored boxes (GCash indicator)
 
 STEP 2: IDENTIFY CONTEXT CLUES
 Look for labels NEAR the date/time:
 - "Date:", "Time:", "Date & Time:", "Transaction Date:", "Sent on:"
 - "Completed on:", "Processed:", "Created:", "Timestamp:"
-- Calendar icons, clock icons
+- Located at BOTTOM section of receipt
+- Text INSIDE yellow/orange colored boxes at the bottom (GCash)
+- Usually on the SAME line or below "Ref No."
 
 STEP 3: DISTINGUISH FROM OTHER DATA
-- Dates have months (Nov, January, etc.) or slashes (11/04/2025)
+- Dates have months (Nov, January, Dec, etc.) or slashes (11/04/2025)
 - Times have colons (10:31) and AM/PM indicators
 - NOT phone numbers (no area code pattern, has slashes or month names)
 - NOT reference numbers (dates have clear date structure)
@@ -753,13 +916,16 @@ STEP 4: EXTRACT BOTH DATE AND TIME
 - Extract time: Use format shown (10:31 AM or 15:30)
 - If "today" or "just now": use current date/time
 - If date and time are separate: combine them
+- Convert to YYYY-MM-DD format: "Dec 05, 2025" → "2025-12-05"
 
-⚠️ IMPORTANT:
+⚠️ IMPORTANT:BOTTOM SECTION
+- For GCash receipts, CHECK YELLOW/ORANGE BOTTOM BOX FIRST!
 - Date/time could be ANYWHERE: top, middle, bottom
 - Could be in HEADER section, FOOTER section, or middle details
 - Could be BEFORE or AFTER transaction details
 - Could be LARGEST text or SMALLEST text
 - May be split across TWO lines (date on one, time on another)
+- Often appears in SAME section as reference number
 - TRUST THE CONTENT - look for what LOOKS like a date/timestamp
 
 CRITICAL FOR CAMERA PHOTOS:
