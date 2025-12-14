@@ -350,436 +350,906 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                  maxWidth: 600,
-                ),
-                child: IntrinsicHeight(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isNarrowScreen ? 16 : size.width * 0.06,
-                      vertical: isNarrowScreen ? 16 : 20,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Back Button
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () {
-                                // Navigate back to login selection page
-                                Get.offAll(
-                                  () => const LoginSelectionPage(),
-                                  transition: Transition.fadeIn,
-                                  duration: const Duration(milliseconds: 300),
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: cardColor,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.black.withOpacity(0.08),
-                                  ),
-                                ),
-                                child: Icon(
-                                  Icons.arrow_back_ios_new_rounded,
-                                  color: textPrimary,
-                                  size: 20,
-                                ),
-                              ),
-                            ),
+            // Determine if content fits without scrolling
+            final needsScroll = constraints.maxHeight < 600;
+
+            return needsScroll
+                ? SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                        maxWidth: 600,
+                      ),
+                      child: IntrinsicHeight(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isNarrowScreen ? 16 : size.width * 0.06,
+                            vertical: isNarrowScreen ? 16 : 20,
                           ),
-                        ),
-
-                        SizedBox(height: verticalPadding),
-
-                        // Google Account Selector
-                        Obx(() => _userEmail.value != null
-                            ? Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: cardColor,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.black.withOpacity(0.08),
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.04),
-                                      offset: const Offset(0, 2),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    // Google icon
-                                    Container(
-                                      width: 40,
-                                      height: 40,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Back Button
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      // Navigate back to login selection page
+                                      Get.offAll(
+                                        () => const LoginSelectionPage(),
+                                        transition: Transition.fadeIn,
+                                        duration:
+                                            const Duration(milliseconds: 300),
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
+                                        color: cardColor,
+                                        borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                          color: Colors.black.withOpacity(0.1),
+                                          color: Colors.black.withOpacity(0.08),
                                         ),
                                       ),
                                       child: Icon(
-                                        Icons.g_mobiledata_rounded,
-                                        color: accentColor,
-                                        size: 32,
+                                        Icons.arrow_back_ios_new_rounded,
+                                        color: textPrimary,
+                                        size: 20,
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            _userName.value ?? 'User',
-                                            style: AppText.poppins(
-                                              color: textPrimary,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            _userEmail.value ?? '',
-                                            style: AppText.poppins(
-                                              color: textMuted,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+
+                              SizedBox(height: verticalPadding),
+
+                              // Google Account Selector
+                              Obx(() => _userEmail.value != null
+                                  ? Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: cardColor,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: Colors.black.withOpacity(0.08),
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withOpacity(0.04),
+                                            offset: const Offset(0, 2),
+                                            blurRadius: 8,
                                           ),
                                         ],
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Material(
-                                      color: Colors.transparent,
-                                      child: InkWell(
-                                        onTap: _changeGoogleAccount,
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: accentColor.withOpacity(0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color:
-                                                  accentColor.withOpacity(0.3),
+                                      child: Row(
+                                        children: [
+                                          // Google icon
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Colors.black
+                                                    .withOpacity(0.1),
+                                              ),
+                                            ),
+                                            child: Icon(
+                                              Icons.g_mobiledata_rounded,
+                                              color: accentColor,
+                                              size: 32,
                                             ),
                                           ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                'Change',
-                                                style: AppText.poppins(
-                                                  color: accentColor,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  _userName.value ?? 'User',
+                                                  style: AppText.poppins(
+                                                    color: textPrimary,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  _userEmail.value ?? '',
+                                                  style: AppText.poppins(
+                                                    color: textMuted,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w400,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              onTap: _changeGoogleAccount,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 12,
+                                                  vertical: 6,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: accentColor
+                                                      .withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: accentColor
+                                                        .withOpacity(0.3),
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      'Change',
+                                                      style: AppText.poppins(
+                                                        color: accentColor,
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Icon(
+                                                      Icons.swap_horiz_rounded,
+                                                      color: accentColor,
+                                                      size: 16,
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
-                                              const SizedBox(width: 4),
-                                              Icon(
-                                                Icons.swap_horiz_rounded,
-                                                color: accentColor,
-                                                size: 16,
-                                              ),
-                                            ],
+                                            ),
                                           ),
-                                        ),
+                                        ],
                                       ),
+                                    )
+                                      .animate()
+                                      .fadeIn(duration: 500.ms, delay: 100.ms)
+                                      .slideY(begin: -0.2, end: 0)
+                                  : const SizedBox.shrink()),
+
+                              SizedBox(height: verticalPadding * 0.75),
+
+                              // Animated Logo/Icon
+                              Container(
+                                width: iconSize,
+                                height: iconSize,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      accentColor,
+                                      accentColor.withOpacity(0.8),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(24),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: accentColor.withOpacity(0.4),
+                                      blurRadius: 24,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.shield_rounded,
+                                  color: Colors.white,
+                                  size: iconSize * 0.5,
+                                ),
+                              )
+                                  .animate()
+                                  .scale(
+                                    duration: 800.ms,
+                                    curve: Curves.elasticOut,
+                                  )
+                                  .shimmer(duration: 1500.ms, delay: 600.ms),
+
+                              SizedBox(height: verticalPadding * 0.75),
+
+                              // Title
+                              Text(
+                                'Welcome Back',
+                                style: AppText.poppins(
+                                  color: textPrimary,
+                                  fontSize: titleSize,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.5,
+                                ),
+                              )
+                                  .animate()
+                                  .fadeIn(duration: 500.ms, delay: 200.ms)
+                                  .slideY(begin: 0.3, end: 0),
+
+                              const SizedBox(height: 8),
+
+                              Text(
+                                'Enter your PIN to continue',
+                                style: AppText.poppins(
+                                  color: textMuted,
+                                  fontSize: isNarrowScreen
+                                      ? 13
+                                      : isSmallScreen
+                                          ? 14
+                                          : 15,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                                textAlign: TextAlign.center,
+                              )
+                                  .animate()
+                                  .fadeIn(duration: 500.ms, delay: 300.ms)
+                                  .slideY(begin: 0.3, end: 0),
+
+                              SizedBox(height: verticalPadding * 1.2),
+
+                              // PIN Display
+                              Obx(() => Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children:
+                                            List.generate(_pinLength, (index) {
+                                          final isFilled =
+                                              index < _pin.value.length;
+                                          return AnimatedContainer(
+                                            duration: const Duration(
+                                                milliseconds: 200),
+                                            curve: Curves.easeOutCubic,
+                                            width: isNarrowScreen
+                                                ? 16
+                                                : isSmallScreen
+                                                    ? 18
+                                                    : 20,
+                                            height: isNarrowScreen
+                                                ? 16
+                                                : isSmallScreen
+                                                    ? 18
+                                                    : 20,
+                                            margin: EdgeInsets.symmetric(
+                                              horizontal: isNarrowScreen
+                                                  ? 8
+                                                  : isSmallScreen
+                                                      ? 10
+                                                      : 14,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isFilled
+                                                  ? accentColor
+                                                  : Colors.transparent,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: isFilled
+                                                    ? accentColor
+                                                    : textMuted
+                                                        .withOpacity(0.3),
+                                                width: 2.5,
+                                              ),
+                                              boxShadow: isFilled
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: accentColor
+                                                            .withOpacity(0.3),
+                                                        blurRadius: 8,
+                                                        spreadRadius: 1,
+                                                      ),
+                                                    ]
+                                                  : [],
+                                            ),
+                                          )
+                                              .animate(
+                                                key: ValueKey(
+                                                    '$index-$isFilled'),
+                                              )
+                                              .scale(
+                                                duration: 200.ms,
+                                                begin: const Offset(0.8, 0.8),
+                                                end: const Offset(1, 1),
+                                              );
+                                        }),
+                                      ))
+                                  .animate()
+                                  .fadeIn(duration: 500.ms, delay: 400.ms)
+                                  .slideY(begin: 0.2, end: 0),
+
+                              SizedBox(height: verticalPadding * 0.5),
+
+                              // Forgot PIN Button
+                              TextButton(
+                                onPressed: () {
+                                  Get.to(
+                                    () => const ForgotPinPage(),
+                                    transition: Transition.fadeIn,
+                                    duration: const Duration(milliseconds: 300),
+                                  );
+                                },
+                                child: Text(
+                                  'Forgot PIN?',
+                                  style: AppText.poppins(
+                                    color: accentColor,
+                                    fontSize: isSmallScreen ? 13 : 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              )
+                                  .animate()
+                                  .fadeIn(duration: 500.ms, delay: 450.ms)
+                                  .slideY(begin: 0.2, end: 0),
+
+                              const Spacer(),
+
+                              // Number Keypad
+                              Container(
+                                constraints: BoxConstraints(
+                                  maxWidth: isNarrowScreen
+                                      ? 280
+                                      : isSmallScreen
+                                          ? 320
+                                          : 380,
+                                ),
+                                child: Column(
+                                  children: [
+                                    _buildKeypadRow(
+                                      ['1', '2', '3'],
+                                      cardColor,
+                                      textPrimary,
+                                      buttonSize,
+                                      isSmallScreen,
+                                    ),
+                                    SizedBox(
+                                        height: isNarrowScreen
+                                            ? 10
+                                            : isSmallScreen
+                                                ? 12
+                                                : 16),
+                                    _buildKeypadRow(
+                                      ['4', '5', '6'],
+                                      cardColor,
+                                      textPrimary,
+                                      buttonSize,
+                                      isSmallScreen,
+                                    ),
+                                    SizedBox(
+                                        height: isNarrowScreen
+                                            ? 10
+                                            : isSmallScreen
+                                                ? 12
+                                                : 16),
+                                    _buildKeypadRow(
+                                      ['7', '8', '9'],
+                                      cardColor,
+                                      textPrimary,
+                                      buttonSize,
+                                      isSmallScreen,
+                                    ),
+                                    SizedBox(
+                                        height: isNarrowScreen
+                                            ? 10
+                                            : isSmallScreen
+                                                ? 12
+                                                : 16),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        Obx(() => _isBiometricAvailable.value
+                                            ? _buildActionButton(
+                                                Icons.fingerprint_rounded,
+                                                _authenticateWithBiometric,
+                                                cardColor,
+                                                accentColor,
+                                                buttonSize,
+                                                isSmallScreen,
+                                              )
+                                            : SizedBox(
+                                                width: buttonSize,
+                                                height: buttonSize,
+                                              )),
+                                        _buildNumberButton(
+                                          '0',
+                                          cardColor,
+                                          textPrimary,
+                                          buttonSize,
+                                          isSmallScreen,
+                                        ),
+                                        _buildActionButton(
+                                          Icons.backspace_outlined,
+                                          _onDeletePressed,
+                                          cardColor,
+                                          textMuted,
+                                          buttonSize,
+                                          isSmallScreen,
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
                               )
-                                .animate()
-                                .fadeIn(duration: 500.ms, delay: 100.ms)
-                                .slideY(begin: -0.2, end: 0)
-                            : const SizedBox.shrink()),
+                                  .animate()
+                                  .fadeIn(duration: 500.ms, delay: 500.ms)
+                                  .slideY(begin: 0.3, end: 0),
 
-                        SizedBox(height: verticalPadding * 0.75),
-
-                        // Animated Logo/Icon
-                        Container(
-                          width: iconSize,
-                          height: iconSize,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                accentColor,
-                                accentColor.withOpacity(0.8),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: accentColor.withOpacity(0.4),
-                                blurRadius: 24,
-                                offset: const Offset(0, 8),
-                              ),
+                              SizedBox(height: verticalPadding * 0.75),
                             ],
                           ),
-                          child: Icon(
-                            Icons.shield_rounded,
-                            color: Colors.white,
-                            size: iconSize * 0.5,
-                          ),
-                        )
-                            .animate()
-                            .scale(
-                              duration: 800.ms,
-                              curve: Curves.elasticOut,
-                            )
-                            .shimmer(duration: 1500.ms, delay: 600.ms),
-
-                        SizedBox(height: verticalPadding * 0.75),
-
-                        // Title
-                        Text(
-                          'Welcome Back',
-                          style: AppText.poppins(
-                            color: textPrimary,
-                            fontSize: titleSize,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.5,
-                          ),
-                        )
-                            .animate()
-                            .fadeIn(duration: 500.ms, delay: 200.ms)
-                            .slideY(begin: 0.3, end: 0),
-
-                        const SizedBox(height: 8),
-
-                        Text(
-                          'Enter your PIN to continue',
-                          style: AppText.poppins(
-                            color: textMuted,
-                            fontSize: isNarrowScreen
-                                ? 13
-                                : isSmallScreen
-                                    ? 14
-                                    : 15,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          textAlign: TextAlign.center,
-                        )
-                            .animate()
-                            .fadeIn(duration: 500.ms, delay: 300.ms)
-                            .slideY(begin: 0.3, end: 0),
-
-                        SizedBox(height: verticalPadding * 1.2),
-
-                        // PIN Display
-                        Obx(() => Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: List.generate(_pinLength, (index) {
-                                    final isFilled = index < _pin.value.length;
-                                    return AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 200),
-                                      curve: Curves.easeOutCubic,
-                                      width: isNarrowScreen
-                                          ? 16
-                                          : isSmallScreen
-                                              ? 18
-                                              : 20,
-                                      height: isNarrowScreen
-                                          ? 16
-                                          : isSmallScreen
-                                              ? 18
-                                              : 20,
-                                      margin: EdgeInsets.symmetric(
-                                        horizontal: isNarrowScreen
-                                            ? 8
-                                            : isSmallScreen
-                                                ? 10
-                                                : 14,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isFilled
-                                            ? accentColor
-                                            : Colors.transparent,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: isFilled
-                                              ? accentColor
-                                              : textMuted.withOpacity(0.3),
-                                          width: 2.5,
-                                        ),
-                                        boxShadow: isFilled
-                                            ? [
-                                                BoxShadow(
-                                                  color: accentColor
-                                                      .withOpacity(0.3),
-                                                  blurRadius: 8,
-                                                  spreadRadius: 1,
-                                                ),
-                                              ]
-                                            : [],
-                                      ),
-                                    )
-                                        .animate(
-                                          key: ValueKey('$index-$isFilled'),
-                                        )
-                                        .scale(
-                                          duration: 200.ms,
-                                          begin: const Offset(0.8, 0.8),
-                                          end: const Offset(1, 1),
-                                        );
-                                  }),
-                                ))
-                            .animate()
-                            .fadeIn(duration: 500.ms, delay: 400.ms)
-                            .slideY(begin: 0.2, end: 0),
-
-                        SizedBox(height: verticalPadding * 0.5),
-
-                        // Forgot PIN Button
-                        TextButton(
-                          onPressed: () {
-                            Get.to(
-                              () => const ForgotPinPage(),
-                              transition: Transition.fadeIn,
-                              duration: const Duration(milliseconds: 300),
-                            );
-                          },
-                          child: Text(
-                            'Forgot PIN?',
-                            style: AppText.poppins(
-                              color: accentColor,
-                              fontSize: isSmallScreen ? 13 : 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        )
-                            .animate()
-                            .fadeIn(duration: 500.ms, delay: 450.ms)
-                            .slideY(begin: 0.2, end: 0),
-
-                        const Spacer(),
-
-                        // Number Keypad
-                        Container(
-                          constraints: BoxConstraints(
-                            maxWidth: isNarrowScreen
-                                ? 280
-                                : isSmallScreen
-                                    ? 320
-                                    : 380,
-                          ),
-                          child: Column(
-                            children: [
-                              _buildKeypadRow(
-                                ['1', '2', '3'],
-                                cardColor,
-                                textPrimary,
-                                buttonSize,
-                                isSmallScreen,
-                              ),
-                              SizedBox(
-                                  height: isNarrowScreen
-                                      ? 10
-                                      : isSmallScreen
-                                          ? 12
-                                          : 16),
-                              _buildKeypadRow(
-                                ['4', '5', '6'],
-                                cardColor,
-                                textPrimary,
-                                buttonSize,
-                                isSmallScreen,
-                              ),
-                              SizedBox(
-                                  height: isNarrowScreen
-                                      ? 10
-                                      : isSmallScreen
-                                          ? 12
-                                          : 16),
-                              _buildKeypadRow(
-                                ['7', '8', '9'],
-                                cardColor,
-                                textPrimary,
-                                buttonSize,
-                                isSmallScreen,
-                              ),
-                              SizedBox(
-                                  height: isNarrowScreen
-                                      ? 10
-                                      : isSmallScreen
-                                          ? 12
-                                          : 16),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  Obx(() => _isBiometricAvailable.value
-                                      ? _buildActionButton(
-                                          Icons.fingerprint_rounded,
-                                          _authenticateWithBiometric,
-                                          cardColor,
-                                          accentColor,
-                                          buttonSize,
-                                          isSmallScreen,
-                                        )
-                                      : SizedBox(
-                                          width: buttonSize,
-                                          height: buttonSize,
-                                        )),
-                                  _buildNumberButton(
-                                    '0',
-                                    cardColor,
-                                    textPrimary,
-                                    buttonSize,
-                                    isSmallScreen,
-                                  ),
-                                  _buildActionButton(
-                                    Icons.backspace_outlined,
-                                    _onDeletePressed,
-                                    cardColor,
-                                    textMuted,
-                                    buttonSize,
-                                    isSmallScreen,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        )
-                            .animate()
-                            .fadeIn(duration: 500.ms, delay: 500.ms)
-                            .slideY(begin: 0.3, end: 0),
-
-                        SizedBox(height: verticalPadding * 0.75),
-                      ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            );
+                  )
+                : Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isNarrowScreen ? 16 : size.width * 0.06,
+                          vertical: isNarrowScreen ? 16 : 20,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Back Button
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    Get.offAll(
+                                      () => const LoginSelectionPage(),
+                                      transition: Transition.fadeIn,
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: cardColor,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.black.withOpacity(0.08),
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      Icons.arrow_back_ios_new_rounded,
+                                      color: textPrimary,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Top section with logo and title
+                            Column(
+                              children: [
+                                // Google Account Selector
+                                Obx(() => _userEmail.value != null
+                                    ? Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: cardColor,
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color:
+                                                Colors.black.withOpacity(0.08),
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black
+                                                  .withOpacity(0.04),
+                                              offset: const Offset(0, 2),
+                                              blurRadius: 8,
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 40,
+                                              height: 40,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.black
+                                                      .withOpacity(0.1),
+                                                ),
+                                              ),
+                                              child: Icon(
+                                                Icons.g_mobiledata_rounded,
+                                                color: accentColor,
+                                                size: 32,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    _userName.value ?? 'User',
+                                                    style: AppText.poppins(
+                                                      color: textPrimary,
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    _userEmail.value ?? '',
+                                                    style: AppText.poppins(
+                                                      color: textMuted,
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w400,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Material(
+                                              color: Colors.transparent,
+                                              child: InkWell(
+                                                onTap: _changeGoogleAccount,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                child: Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 6,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: accentColor
+                                                        .withOpacity(0.1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                    border: Border.all(
+                                                      color: accentColor
+                                                          .withOpacity(0.3),
+                                                    ),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Text(
+                                                        'Change',
+                                                        style: AppText.poppins(
+                                                          color: accentColor,
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Icon(
+                                                        Icons
+                                                            .swap_horiz_rounded,
+                                                        color: accentColor,
+                                                        size: 16,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                        .animate()
+                                        .fadeIn(duration: 500.ms, delay: 100.ms)
+                                        .slideY(begin: -0.2, end: 0)
+                                    : const SizedBox.shrink()),
+
+                                SizedBox(height: verticalPadding * 0.75),
+
+                                // Animated Logo/Icon
+                                Container(
+                                  width: iconSize,
+                                  height: iconSize,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        accentColor,
+                                        accentColor.withOpacity(0.8),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(24),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: accentColor.withOpacity(0.4),
+                                        blurRadius: 24,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    Icons.shield_rounded,
+                                    color: Colors.white,
+                                    size: iconSize * 0.5,
+                                  ),
+                                )
+                                    .animate()
+                                    .scale(
+                                      duration: 800.ms,
+                                      curve: Curves.elasticOut,
+                                    )
+                                    .shimmer(duration: 1500.ms, delay: 600.ms),
+
+                                SizedBox(height: verticalPadding * 0.75),
+
+                                // Title
+                                Text(
+                                  'Welcome Back',
+                                  style: AppText.poppins(
+                                    color: textPrimary,
+                                    fontSize: titleSize,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.5,
+                                  ),
+                                )
+                                    .animate()
+                                    .fadeIn(duration: 500.ms, delay: 200.ms)
+                                    .slideY(begin: 0.3, end: 0),
+
+                                const SizedBox(height: 8),
+
+                                Text(
+                                  'Enter your PIN to continue',
+                                  style: AppText.poppins(
+                                    color: textMuted,
+                                    fontSize: isNarrowScreen
+                                        ? 13
+                                        : isSmallScreen
+                                            ? 14
+                                            : 15,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                )
+                                    .animate()
+                                    .fadeIn(duration: 500.ms, delay: 300.ms)
+                                    .slideY(begin: 0.3, end: 0),
+
+                                SizedBox(height: verticalPadding * 1.2),
+
+                                // PIN Display
+                                Obx(() => Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: List.generate(_pinLength,
+                                              (index) {
+                                            final isFilled =
+                                                index < _pin.value.length;
+                                            return AnimatedContainer(
+                                              duration: const Duration(
+                                                  milliseconds: 200),
+                                              curve: Curves.easeOutCubic,
+                                              width: isNarrowScreen
+                                                  ? 16
+                                                  : isSmallScreen
+                                                      ? 18
+                                                      : 20,
+                                              height: isNarrowScreen
+                                                  ? 16
+                                                  : isSmallScreen
+                                                      ? 18
+                                                      : 20,
+                                              margin: EdgeInsets.symmetric(
+                                                horizontal: isNarrowScreen
+                                                    ? 8
+                                                    : isSmallScreen
+                                                        ? 10
+                                                        : 14,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: isFilled
+                                                    ? accentColor
+                                                    : Colors.transparent,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: isFilled
+                                                      ? accentColor
+                                                      : textMuted
+                                                          .withOpacity(0.3),
+                                                  width: 2.5,
+                                                ),
+                                                boxShadow: isFilled
+                                                    ? [
+                                                        BoxShadow(
+                                                          color: accentColor
+                                                              .withOpacity(0.3),
+                                                          blurRadius: 8,
+                                                          spreadRadius: 1,
+                                                        ),
+                                                      ]
+                                                    : [],
+                                              ),
+                                            )
+                                                .animate(
+                                                  key: ValueKey(
+                                                      '$index-$isFilled'),
+                                                )
+                                                .scale(
+                                                  duration: 200.ms,
+                                                  begin: const Offset(0.8, 0.8),
+                                                  end: const Offset(1, 1),
+                                                );
+                                          }),
+                                        ))
+                                    .animate()
+                                    .fadeIn(duration: 500.ms, delay: 400.ms)
+                                    .slideY(begin: 0.2, end: 0),
+
+                                SizedBox(height: verticalPadding * 0.5),
+
+                                // Forgot PIN Button
+                                TextButton(
+                                  onPressed: () {
+                                    Get.to(
+                                      () => const ForgotPinPage(),
+                                      transition: Transition.fadeIn,
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                    );
+                                  },
+                                  child: Text(
+                                    'Forgot PIN?',
+                                    style: AppText.poppins(
+                                      color: accentColor,
+                                      fontSize: isSmallScreen ? 13 : 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                )
+                                    .animate()
+                                    .fadeIn(duration: 500.ms, delay: 450.ms)
+                                    .slideY(begin: 0.2, end: 0),
+                              ],
+                            ),
+
+                            // Bottom section with keypad
+                            Column(
+                              children: [
+                                // Number Keypad
+                                Container(
+                                  constraints: BoxConstraints(
+                                    maxWidth: isNarrowScreen
+                                        ? 280
+                                        : isSmallScreen
+                                            ? 320
+                                            : 380,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      _buildKeypadRow(
+                                        ['1', '2', '3'],
+                                        cardColor,
+                                        textPrimary,
+                                        buttonSize,
+                                        isSmallScreen,
+                                      ),
+                                      SizedBox(
+                                          height: isNarrowScreen
+                                              ? 10
+                                              : isSmallScreen
+                                                  ? 12
+                                                  : 16),
+                                      _buildKeypadRow(
+                                        ['4', '5', '6'],
+                                        cardColor,
+                                        textPrimary,
+                                        buttonSize,
+                                        isSmallScreen,
+                                      ),
+                                      SizedBox(
+                                          height: isNarrowScreen
+                                              ? 10
+                                              : isSmallScreen
+                                                  ? 12
+                                                  : 16),
+                                      _buildKeypadRow(
+                                        ['7', '8', '9'],
+                                        cardColor,
+                                        textPrimary,
+                                        buttonSize,
+                                        isSmallScreen,
+                                      ),
+                                      SizedBox(
+                                          height: isNarrowScreen
+                                              ? 10
+                                              : isSmallScreen
+                                                  ? 12
+                                                  : 16),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceEvenly,
+                                        children: [
+                                          Obx(() => _isBiometricAvailable.value
+                                              ? _buildActionButton(
+                                                  Icons.fingerprint_rounded,
+                                                  _authenticateWithBiometric,
+                                                  cardColor,
+                                                  accentColor,
+                                                  buttonSize,
+                                                  isSmallScreen,
+                                                )
+                                              : SizedBox(
+                                                  width: buttonSize,
+                                                  height: buttonSize,
+                                                )),
+                                          _buildNumberButton(
+                                            '0',
+                                            cardColor,
+                                            textPrimary,
+                                            buttonSize,
+                                            isSmallScreen,
+                                          ),
+                                          _buildActionButton(
+                                            Icons.backspace_outlined,
+                                            _onDeletePressed,
+                                            cardColor,
+                                            textMuted,
+                                            buttonSize,
+                                            isSmallScreen,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                )
+                                    .animate()
+                                    .fadeIn(duration: 500.ms, delay: 500.ms)
+                                    .slideY(begin: 0.3, end: 0),
+
+                                SizedBox(height: verticalPadding * 0.75),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
           },
         ),
       ),
