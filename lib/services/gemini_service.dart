@@ -17,12 +17,16 @@ import '../config/api_keys.dart';
 /// The AI analyzes text positioning and labels to accurately extract
 /// transaction data from various receipt formats.
 class GeminiService {
+  // Singleton pattern for better performance
+  static final GeminiService _instance = GeminiService._internal();
+  factory GeminiService() => _instance;
+
   // API key is now stored in lib/config/api_keys.dart
   // Make sure to add that file to .gitignore!
   static const String _apiKey = ApiKeys.geminiApiKey;
   late final GenerativeModel _model;
 
-  GeminiService() {
+  GeminiService._internal() {
     _model = GenerativeModel(
       model: 'gemini-2.5-flash',
       apiKey: _apiKey,

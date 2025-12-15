@@ -43,15 +43,24 @@ import 'gemini_service.dart';
 ///
 /// Extracts data based on text positioning and structure patterns.
 class OCRService {
+  // Singleton pattern for better performance
+  static final OCRService _instance = OCRService._internal();
+  factory OCRService() => _instance;
+
   TextRecognizer? _textRecognizer;
   final GeminiService _geminiService = GeminiService();
   XFile? _lastPickedImage; // Store the XFile for web access
 
-  OCRService() {
-    // Only initialize ML Kit on mobile platforms
-    if (!kIsWeb) {
+  OCRService._internal() {
+    // Lazy initialization - TextRecognizer created only when first used
+  }
+
+  // Lazy load TextRecognizer only when needed
+  TextRecognizer _getTextRecognizer() {
+    if (!kIsWeb && _textRecognizer == null) {
       _textRecognizer = TextRecognizer();
     }
+    return _textRecognizer!;
   }
 
   // Pick image from gallery or camera
@@ -2664,8 +2673,18 @@ Just output the raw text content.
     return 0.0;
   }
 
-  // Dispose
+  // Dispose TextRecognizer resources
+  // Note: For singleton pattern, this should be called when app terminates
+  // or when you're sure OCR is no longer needed.
+  // Consider calling this in your app's dispose/cleanup lifecycle.
   void dispose() {
     _textRecognizer?.close();
+    _textRecognizer = null;
+  }
+
+  // Static method to properly dispose the singleton instance
+  // Call this in your app's main dispose or when completely done with OCR
+  static void disposeSingleton() {
+    _instance.dispose();
   }
 }

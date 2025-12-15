@@ -133,4 +133,11 @@ class AppController extends GetxController {
     }
     return 0.0;
   }
+
+  @override
+  void onClose() {
+    // Clean up resources when controller is disposed
+    // GetX automatically calls onClose() when controller is removed
+    super.onClose();
+  }
 }

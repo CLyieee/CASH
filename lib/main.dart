@@ -12,12 +12,19 @@ import 'widgets/global_loading_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Optimize Flutter performance
+  debugPrintRebuildDirtyWidgets = false;
+  debugProfileBuildsEnabled = false;
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  // Initialize AppController
-  Get.put(AppController());
-  Get.put(ThemeController());
+
+  // Initialize controllers - lazy loading for better startup time
+  Get.lazyPut<AppController>(() => AppController());
+  Get.lazyPut<ThemeController>(() => ThemeController());
+
   runApp(const MyApp());
 }
 
