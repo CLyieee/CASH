@@ -149,11 +149,23 @@ class GeminiService {
 You are analyzing a MONEY TRANSFER or BANK TRANSFER receipt image.
 
 ⚠️⚠️⚠️ MOST IMPORTANT RULE ⚠️⚠️⚠️
-FIRST: Look at the TITLE/HEADER of the receipt!
+FIRST: Look at the TITLE/HEADER and CONTENT of the receipt!
 - If it says "Bank Transfer Complete" → This is a BANK TRANSFER (use bank_transfer JSON format)
-- If it says "Send Money" or has phone numbers → This is a MONEY TRANSFER
+- If it says "Send Money" and shows a person's name → This is a MONEY TRANSFER
+- If it shows a PROMO/LOAD NAME at the top (like "EasySURF50+5G" or "GIGA50") → This is a MOBILE LOAD
+- If it says "Paid via GCash" and has "Schedule for Autoload" → This is a MOBILE LOAD
 
-DO NOT SKIP THIS STEP! The title tells you which format to use!
+HOW TO DETECT MOBILE LOAD RECEIPTS:
+1. Check TOP section for PROMO/LOAD NAMES:
+   - Names with numbers and special characters (e.g., "EasySURF50+5G+FunALIW+")
+   - Product names (e.g., "GIGA50", "AllNet99", "Unli Call & Text")
+   - NOT person names (no masked characters like "JE....Y Z.")
+2. Look for "Paid via GCash" instead of "Sent via GCash"
+3. May have "Schedule for Autoload" button/text
+4. May have "Convenience Fee" instead of just "Fee"
+5. The recipient is a MOBILE NUMBER, not a person's name
+
+DO NOT SKIP THIS STEP! The title and content tell you which format to use!
 
 📍📍📍 GCASH RECEIPT STRUCTURE (DATA LOCATION GUIDE) 📍📍📍
 For GCash receipts, data appears in a specific layout pattern:
@@ -252,6 +264,169 @@ EXTRACTION STRATEGY FOR GCASH RECEIPTS:
 - Amount appears after "Sent via GCash"
 - Ref number is near the BOTTOM with date/time
 - This structure is consistent across GCash paper and digital receipts
+
+═══════════════════════════════════════════════════════════════
+📱 MOBILE LOAD RECEIPT STRUCTURE (VISUAL LAYOUT GUIDE)
+═══════════════════════════════════════════════════════════════
+
+For mobile load receipts (promo loads, prepaid loads), data follows this structure:
+
+VISUAL LAYOUT:
+┌─────────────────────────────────┐
+│  ✓ [Checkmark at top]          │
+│                                 │
+│  ━━━ TOP SECTION (RED) ━━━     │
+│  EasySURF50+5G+FunALIW+        │ ← LOAD/PROMO NAME
+│                                 │
+│  ━━━ BELOW (BLUE) ━━━          │
+│  +63 975 980 7013               │ ← MOBILE NUMBER
+│                                 │
+│  Paid via GCash                 │ ← Service indicator
+│                                 │
+│  ━━━ MIDDLE (VIOLET) ━━━        │
+│  Amount      50.00              │ ← LOAD AMOUNT
+│  Convenience Fee  1.00          │
+│  Total       ₱ 51.00            │
+│                                 │
+│  Schedule for Autoload          │
+│                                 │
+│  ━━━ BOTTOM (ORANGE/PINK) ━━━  │
+│  Date  Dec 08, 2025 4:57 PM     │ ← DATE AND TIME
+│  Reference No.  918160648       │ ← REFERENCE NUMBER
+│                                 │
+│  [Promotional content]          │
+└─────────────────────────────────┘
+
+EXTRACTION STRATEGY FOR LOAD RECEIPTS:
+1. IDENTIFY sections: Top (promo name), Below (mobile number), Middle (amount), Bottom (reference)
+2. READ text in SEQUENTIAL ORDER from top to bottom
+3. MATCH text position to data type:
+   - Top Section (RED annotation area) = Load/Promo Name
+   - Below (BLUE annotation area) = Mobile Number
+   - Middle (VIOLET annotation area) = Load Amount
+   - Bottom (ORANGE annotation area) = Transaction Date/Time
+   - Bottom (PINK annotation area) = Reference Number
+4. EXTRACT text based on LABELS and POSITION
+5. IGNORE promotional text, ads, carbon footprint info
+
+📍 KEY DIFFERENCES FROM MONEY TRANSFER:
+- RECIPIENT NAME = The LOAD/PROMO NAME (e.g., "EasySURF50+5G+FunALIW+")
+- Located at the TOP before the phone number
+- This is NOT a person's name - it's the product name
+- May contain: numbers, special characters, acronyms
+- Examples: "GIGA50", "AllNet99", "EasySURF50+5G", "Unli Call & Text"
+
+⚠️ IMPORTANT NOTES FOR LOAD RECEIPTS:
+- The colored boxes are ANNOTATIONS only (not part of the actual receipt)
+- RED area = Where load/promo name appears
+- BLUE area = Where mobile number appears
+- VIOLET area = Where load amount appears
+- ORANGE area = Where date/time appears
+- PINK area = Where reference number appears
+- Extract text EXACTLY as displayed in those regions
+- Ignore all unrelated promotional content
+- Return null for fields that cannot be confidently read
+
+═══════════════════════════════════════════════════════════════
+🏦 BANK TRANSFER RECEIPT STRUCTURE (VISUAL LAYOUT GUIDE)
+═══════════════════════════════════════════════════════════════
+
+For bank transfer receipts, data follows this structure:
+
+VISUAL LAYOUT:
+┌─────────────────────────────────┐
+│  Bank Transfer Complete         │
+│  Sent via GCash                 │
+│                                 │
+│  ━━━ RED AREA ━━━              │
+│  Bank         RCBC/DiskarTech   │ ← BANK NAME
+│                                 │
+│  ━━━ ORANGE AREA ━━━           │
+│  Account No.  ............5153  │ ← ACCOUNT NUMBER (masked)
+│                                 │
+│  ━━━ YELLOW AREA ━━━           │
+│  Account Name LOUISE KYLA ABRIGO│ ← ACCOUNT NAME
+│                                 │
+│  Receipt sent to                │
+│  eduardbertillo2@gmail.com      │
+│                                 │
+│  ━━━ BLUE AREA ━━━             │
+│  Transfer Date Dec 12,2025 05:29│ ← DATE AND TIME
+│                PM                │
+│                                 │
+│  Transfer Amount     198.00     │
+│  +Fee                 15.00     │
+│                                 │
+│  ━━━ VIOLET AREA ━━━           │
+│  Total            ₱ 213.00      │ ← TOTAL AMOUNT
+│                                 │
+│  InstaPay Invoice No. 8653859   │
+│  Ref No.      5035690403112     │ ← Reference (NOT InstaPay)
+│                                 │
+│  [Carbon footprint info]        │
+└─────────────────────────────────┘
+
+EXTRACTION STRATEGY FOR BANK TRANSFER RECEIPTS:
+1. CONFIRM it says "Bank Transfer Complete" at the top
+2. READ text in SEQUENTIAL ORDER from top to bottom
+3. MATCH text position to data type:
+   - RED annotation area = Bank Name
+   - ORANGE annotation area = Account Number (masked with dots/asterisks)
+   - YELLOW annotation area = Account Name
+   - BLUE annotation area = Transfer Date and Time
+   - VIOLET annotation area = Total Amount (including fee)
+4. EXTRACT text based on LABELS and POSITION
+5. IGNORE InstaPay Invoice No. - use Ref No. instead
+6. IGNORE promotional text (carbon footprint, etc.)
+
+📍 KEY BANK TRANSFER FIELDS:
+1. BANK NAME (RED area):
+   - Label: "Bank"
+   - Position: After "Sent via GCash", first labeled field
+   - Examples: "MariBank", "RCBC/DiskarTech", "BPI", "BDO"
+   - Extract EXACTLY as shown
+
+2. ACCOUNT NUMBER (ORANGE area):
+   - Label: "Account No."
+   - Position: Below bank name
+   - Format: Usually masked with dots/asterisks (e.g., "............5153", "******9008")
+   - Extract with masking characters intact
+
+3. ACCOUNT NAME (YELLOW area):
+   - Label: "Account Name"
+   - Position: Below account number
+   - Format: Full name in UPPERCASE (e.g., "LOUISE KYLA ABRIGO", "GEMMA M.")
+   - Extract EXACTLY as shown (preserve case)
+
+4. TRANSFER DATE/TIME (BLUE area):
+   - Label: "Transfer Date"
+   - Position: After receipt email field
+   - Format: "Dec 12,2025 05:29 PM" or similar
+   - Extract complete date and time
+
+5. TOTAL AMOUNT (VIOLET area):
+   - Label: "Total"
+   - Position: After "Transfer Amount" and "+Fee" breakdown
+   - Format: "₱ 213.00" or "213.00"
+   - Extract numeric value only (e.g., 213.00)
+   - This is Transfer Amount + Fee
+
+6. REFERENCE NUMBER:
+   - Label: "Ref No." (NOT "InstaPay Invoice No.")
+   - Position: At bottom, after InstaPay Invoice line
+   - Format: Long number (12+ digits, may be alphanumeric)
+   - ⚠️ CRITICAL: Use "Ref No." value, IGNORE "InstaPay Invoice No."
+
+⚠️ IMPORTANT NOTES FOR BANK TRANSFER RECEIPTS:
+- The colored boxes are ANNOTATIONS only (not part of the actual receipt)
+- RED area = Where bank name appears
+- ORANGE area = Where account number appears (masked)
+- YELLOW area = Where account name appears
+- BLUE area = Where transfer date/time appears
+- VIOLET area = Where total amount appears (including fee)
+- Extract text EXACTLY as displayed in those regions
+- Ignore InstaPay Invoice No. - only use Ref No.
+- Return null for fields that cannot be confidently read
 
 ═══════════════════════════════════════════════════════════════
 
@@ -620,6 +795,20 @@ FOR MONEY TRANSFER, use this JSON format:
   "date": "Transaction date (format: YYYY-MM-DD)",
   "time": "Transaction time (format: HH:MM AM/PM)",
   "source": "Service provider name (GCash, Maya, Bank name, etc.)"
+}
+
+FOR MOBILE LOAD/PROMO LOAD, use this JSON format:
+{
+  "transaction_type": "load",
+  "recipient_name": "Load or promo name (e.g., EasySURF50+5G+FunALIW+, GIGA50, AllNet99)",
+  "phone_number": "Mobile number receiving the load (with country code, e.g., +63 975 980 7013)",
+  "amount": "Load amount only (numeric, e.g., 50.00 - NOT including convenience fee)",
+  "fee": "Convenience fee (numeric only, e.g., 1.00, may be 0 or Not found)",
+  "total_amount": "Total amount paid (numeric only, including fee if applicable)",
+  "reference_number": "Transaction/Reference number",
+  "date": "Transaction date (format: YYYY-MM-DD)",
+  "time": "Transaction time (format: HH:MM AM/PM)",
+  "source": "Service provider name (GCash, Load, etc.)"
 }
 
 CRITICAL EXTRACTION RULES:
@@ -1018,7 +1207,54 @@ MONEY TRANSFER CHECKLIST:
 □ No "Bank" or "Account No." fields present?
 □ transaction_type: "money_transfer"
 
+MOBILE LOAD CHECKLIST:
+□ Does the TOP show a PROMO/LOAD NAME (e.g., "EasySURF50+5G", "GIGA50")?
+□ Is this a product name with numbers/special characters (NOT a person's name)?
+□ Does it say "Paid via GCash" (NOT "Sent via GCash")?
+□ Is there a mobile number (the recipient of the load)?
+□ Does it show "Convenience Fee" or "Autoload" text?
+□ transaction_type: "load"
+□ recipient_name: should be the LOAD/PROMO NAME (e.g., "EasySURF50+5G+FunALIW+")
+□ phone_number: should be the MOBILE NUMBER receiving the load
+□ amount: should be the LOAD AMOUNT (NOT including convenience fee)
+□ fee: should be the "Convenience Fee" value
+□ total_amount: should include load amount + convenience fee
+
+MOBILE LOAD EXTRACTION GUIDE:
+For mobile load receipts, follow this structure:
+
+1. TOP SECTION (annotated RED area):
+   - Look for the LOAD/PROMO NAME
+   - Examples: "EasySURF50+5G+FunALIW+", "GIGA50", "AllNet99"
+   - This is NOT a person's name - it's a product/promo name
+   - Extract EXACTLY as displayed
+   - This becomes the recipient_name field
+
+2. BELOW TOP (annotated BLUE area):
+   - Look for the MOBILE NUMBER
+   - Format: +63 XXX XXX XXXX
+   - This is the number receiving the load
+   - Extract with country code if present
+
+3. MIDDLE SECTION (annotated VIOLET area):
+   - Look for "Amount" label
+   - This is the LOAD AMOUNT ONLY (exclude convenience fee)
+   - Extract numeric value only (e.g., 50.00)
+   - Look for "Convenience Fee" - this is separate
+   - Look for "Total" - this includes amount + fee
+
+4. BOTTOM SECTION (annotated ORANGE/PINK areas):
+   - ORANGE: Look for "Date" label (e.g., "Dec 08, 2025 4:57 PM")
+   - PINK: Look for "Reference No." label (e.g., "918160648")
+   - Extract both exactly as shown
+   - Convert date to YYYY-MM-DD format
+
+5. SOURCE:
+   - Usually "GCash" for load receipts
+   - May say "Paid via GCash"
+
 ⚠️ CRITICAL: If you see "Bank Transfer Complete", you MUST use the bank_transfer format!
+⚠️ CRITICAL: If you see a PROMO NAME at top (not a person's name), you MUST use the load format!
 
 ═══════════════════════════════════════════════════════════════
 

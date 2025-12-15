@@ -1034,9 +1034,21 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
       _buildInfoRow(colorScheme, 'Bank', widget.receipt.phoneNumber,
           Icons.account_balance),
       _buildDivider(colorScheme),
+      if (widget.receipt.accountNumber != null &&
+          widget.receipt.accountNumber!.isNotEmpty) ...[
+        _buildInfoRow(colorScheme, 'Account Number',
+            widget.receipt.accountNumber!, Icons.account_box),
+        _buildDivider(colorScheme),
+      ],
       _buildInfoRow(colorScheme, 'Account Name', widget.receipt.recipientName,
           Icons.person_outline),
       _buildDivider(colorScheme),
+      if (widget.receipt.receiptEmail != null &&
+          widget.receipt.receiptEmail!.isNotEmpty) ...[
+        _buildInfoRow(colorScheme, 'Receipt sent to',
+            widget.receipt.receiptEmail!, Icons.email_outlined),
+        _buildDivider(colorScheme),
+      ],
       _buildInfoRow(colorScheme, 'Transfer Amount',
           currencyFormat.format(widget.receipt.amount), Icons.attach_money),
       _buildDivider(colorScheme),
