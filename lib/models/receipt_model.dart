@@ -7,6 +7,9 @@ class ReceiptModel {
   final double fee;
   final String source; // e.g., "GCash", "Palawan", etc.
   final String transactionType; // "money_transfer" or "bank_transfer"
+  final String? accountNumber; // For bank transfers (masked account number)
+  final String?
+      receiptEmail; // For bank transfers (email where receipt was sent)
 
   ReceiptModel({
     required this.recipientName,
@@ -17,6 +20,8 @@ class ReceiptModel {
     required this.fee,
     this.source = 'GCash',
     this.transactionType = 'money_transfer',
+    this.accountNumber,
+    this.receiptEmail,
   });
 
   double get totalAmount => amount + fee;
@@ -32,6 +37,8 @@ class ReceiptModel {
       'source': source,
       'totalAmount': totalAmount,
       'transactionType': transactionType,
+      'accountNumber': accountNumber,
+      'receiptEmail': receiptEmail,
     };
   }
 
@@ -45,6 +52,8 @@ class ReceiptModel {
       fee: (map['fee'] ?? 0).toDouble(),
       source: map['source'] ?? 'GCash',
       transactionType: map['transactionType'] ?? 'money_transfer',
+      accountNumber: map['accountNumber'],
+      receiptEmail: map['receiptEmail'],
     );
   }
 
@@ -57,6 +66,8 @@ class ReceiptModel {
     double? fee,
     String? source,
     String? transactionType,
+    String? accountNumber,
+    String? receiptEmail,
   }) {
     return ReceiptModel(
       recipientName: recipientName ?? this.recipientName,
@@ -67,6 +78,8 @@ class ReceiptModel {
       fee: fee ?? this.fee,
       source: source ?? this.source,
       transactionType: transactionType ?? this.transactionType,
+      accountNumber: accountNumber ?? this.accountNumber,
+      receiptEmail: receiptEmail ?? this.receiptEmail,
     );
   }
 }

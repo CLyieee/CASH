@@ -10,7 +10,7 @@ import 'gemini_service.dart';
 
 /// OCRService - Standalone OCR with intelligent GCash receipt structure detection
 ///
-/// GCASH RECEIPT STRUCTURE:
+/// GCASH RECEIPT STRUCTURE (Money Transfer):
 /// Understands the standard GCash receipt layout:
 /// 1. Recipient Name (top section) - masked format like "JE....Y Z." or full name
 /// 2. Phone Number (below name) - format: +63 XXX XXX XXXX
@@ -18,6 +18,28 @@ import 'gemini_service.dart';
 /// 4. Amount section - labeled "Amount" with value
 /// 5. Total display - "Total Amount Sent ₱XXX.XX"
 /// 6. Reference section (bottom) - "Ref No." with number and date/time
+///
+/// MOBILE LOAD RECEIPT STRUCTURE:
+/// Understands mobile load receipt layout based on position:
+/// 1. Load/Promo Name (TOP - red annotation area) - e.g., "EasySURF50+5G+FunALIW+"
+/// 2. Mobile Number (BELOW - blue annotation area) - format: +63 XXX XXX XXXX
+/// 3. Service indicator - "Paid via GCash"
+/// 4. Load Amount (MIDDLE - violet annotation area) - labeled "Amount" with value
+/// 5. Convenience Fee - additional fee for the load
+/// 6. Total display - includes amount + fee
+/// 7. Date/Time (BOTTOM - orange annotation area) - transaction timestamp
+/// 8. Reference Number (BOTTOM - pink annotation area) - transaction reference
+///
+/// BANK TRANSFER RECEIPT STRUCTURE:
+/// Understands bank transfer receipt layout based on position:
+/// 1. Bank Name (RED annotation area) - e.g., "RCBC/DiskarTech", "MariBank"
+/// 2. Account Number (ORANGE annotation area) - masked format: "............5153"
+/// 3. Account Name (YELLOW annotation area) - full name: "LOUISE KYLA ABRIGO"
+/// 4. Transfer Date/Time (BLUE annotation area) - e.g., "Dec 12,2025 05:29 PM"
+/// 5. Transfer Amount - the amount being transferred (without fee)
+/// 6. Bank Fee (+Fee) - the transfer fee charged
+/// 7. Total Amount (VIOLET annotation area) - transfer amount + fee
+/// 8. Reference Number (bottom) - labeled "Ref No." (NOT InstaPay Invoice No.)
 ///
 /// Extracts data based on text positioning and structure patterns.
 class OCRService {
@@ -720,20 +742,32 @@ Just output the raw text content.
     String? dateStr;
 
     // PRIORITY 1: Check if this is a LOAD transaction
-    // If load, extract the product name at the top as recipient
+    // If load, extract the product name at the TOP as recipient
     final isLoad = _isLoadTransaction(cleanedText, cleanedText.toLowerCase());
     if (isLoad) {
-      // Extract the FIRST line that looks like a product name (usually at top, caps/mixed)
-      for (var line in lines) {
-        // Match product names like "EasySURF50 5G FunALIW", "GIGA50", "AllNet99"
-        if (RegExp(r'[A-Z0-9][A-Za-z0-9\s]{3,}', caseSensitive: true)
-            .hasMatch(line)) {
-          // Avoid labels
-          if (!RegExp(r'(paid|via|amount|total|date|fee)', caseSensitive: false)
+      // MOBILE LOAD STRUCTURE:
+      // - TOP SECTION (red annotation area) = Load/Promo Name
+      // - BELOW (blue annotation area) = Mobile Number
+      // Extract the FIRST/TOP line that looks like a product name
+      // This appears at the very top before the phone number
+
+      for (int i = 0; i < lines.length && i < 10; i++) {
+        final line = lines[i].trim();
+        // Match product names like "EasySURF50+5G+FunALIW+", "GIGA50", "AllNet99"
+        // These are in the TOP section (red annotation area)
+        // Look for: mixed case, numbers, special chars, NOT person name format
+        if (line.length >= 5 &&
+            RegExp(r'[A-Z0-9][A-Za-z0-9\s+\-]{2,}', caseSensitive: true)
+                .hasMatch(line)) {
+          // Avoid labels and common words
+          if (!RegExp(
+                  r'(paid|via|amount|total|date|fee|gcash|reference|convenience)',
+                  caseSensitive: false)
               .hasMatch(line)) {
-            recipientName = line.trim() + '.';
+            // This is likely the load/promo name at the TOP
+            recipientName = line.endsWith('.') ? line : line + '.';
             print(
-                '✅ [Normalization] LOAD transaction - product name: "$recipientName"');
+                '✅ [Normalization] LOAD transaction - promo name from TOP: "$recipientName"');
             break;
           }
         }
@@ -955,12 +989,20 @@ Just output the raw text content.
       }
       print('Bank: $bankName');
 
+      // Extract account number
+      String accountNumber = _extractAccountNumber(text);
+      print('Account Number: $accountNumber');
+
       // Extract account name with fallbacks
       String accountName = _extractAccountName(text);
       if (accountName.isEmpty) {
         accountName = _extractAccountNameSmart(text);
       }
       print('Account Name: $accountName');
+
+      // Extract receipt email
+      String receiptEmail = _extractEmail(text);
+      print('Receipt Email: $receiptEmail');
 
       // Extract transfer amount with fallbacks
       double amount = _extractAmount(text);
@@ -1028,6 +1070,8 @@ Just output the raw text content.
         fee: bankFee,
         source: _detectSource(text),
         transactionType: 'bank_transfer',
+        accountNumber: accountNumber.isNotEmpty ? accountNumber : null,
+        receiptEmail: receiptEmail.isNotEmpty ? receiptEmail : null,
       );
     } catch (e) {
       print('❌ Error extracting bank transfer data: $e');
@@ -2087,8 +2131,43 @@ Just output the raw text content.
   String _cleanAndValidateRefNumber(String refStr) {
     if (refStr.isEmpty) return '';
 
+    // Remove icon characters that OCR might misread (copy button icons, etc.)
+    // Common icon characters: □, ☐, ☑, ✓, ✔, ⬜, 📋, 📄, and various Unicode symbols
+    String cleaned = refStr
+        .replaceAll(RegExp(r'[\u2610-\u2612]'), '') // Checkbox icons
+        .replaceAll(RegExp(r'[\u2713-\u2714]'), '') // Checkmark icons
+        .replaceAll(RegExp(r'[\u25A0-\u25FF]'), '') // Geometric shapes
+        .replaceAll(RegExp(r'[\u2B1B-\u2B1C]'), '') // Black/white squares
+        .replaceAll(
+            RegExp(r'[\u1F4CB-\u1F4CE]'), '') // Clipboard/document emojis
+        .replaceAll(RegExp(r'[\u2B55-\u2B59]'), '') // Circle icons
+        .replaceAll(
+            RegExp(r'[⌐¬º°•◯○●◉◌]'), '') // Misc special chars and circles
+        .trim();
+
+    // Remove standalone "0" at the end if it looks like a misread copy icon
+    // Only if there's other content before it
+    if (cleaned.endsWith(' 0') ||
+        cleaned.endsWith('-0') ||
+        cleaned.endsWith('0 ')) {
+      final withoutTrailingZero =
+          cleaned.substring(0, cleaned.length - 2).trim();
+      if (withoutTrailingZero.isNotEmpty &&
+          RegExp(r'\d').hasMatch(withoutTrailingZero)) {
+        cleaned = withoutTrailingZero;
+        print('🧹 Removed trailing "0" (likely copy icon): "$cleaned"');
+      }
+    } else if (cleaned.endsWith('0') && cleaned.length > 1) {
+      // Check if the 0 is isolated (not part of a sequence like "100" or "20")
+      final beforeZero = cleaned.substring(0, cleaned.length - 1);
+      if (beforeZero.endsWith(' ') || beforeZero.endsWith('-')) {
+        cleaned = beforeZero.trim();
+        print('🧹 Removed trailing "0" (likely copy icon): "$cleaned"');
+      }
+    }
+
     // Clean up reference number - remove spaces and dashes for validation
-    final cleanedStr = refStr.replaceAll(RegExp(r'[\s\-]'), '');
+    final cleanedStr = cleaned.replaceAll(RegExp(r'[\s\-]'), '');
 
     // SPECIAL CASE: Money transfer format with exactly 13 digits
     final digitCount = cleanedStr.replaceAll(RegExp(r'[^0-9]'), '').length;
@@ -2114,7 +2193,8 @@ Just output the raw text content.
         (cleanedStr.startsWith('9') && cleanedStr.length <= 12)) return '';
 
     // Exclude if it looks like an amount (has decimal)
-    if (refStr.contains('.') && RegExp(r'\.\d{2}$').hasMatch(refStr)) return '';
+    if (cleaned.contains('.') && RegExp(r'\.\d{2}$').hasMatch(cleaned))
+      return '';
 
     // Exclude if it's timestamp-like (too many zeros or sequential)
     if (cleanedStr.contains('000000') || cleanedStr.contains('123456'))
@@ -2124,7 +2204,7 @@ Just output the raw text content.
     // This allows shorter but valid reference numbers to pass through
     if (digitCount < 6) return '';
 
-    return refStr.trim();
+    return cleaned.trim();
   }
 
   // Extract date - flexible pattern matching for various date formats
@@ -2222,7 +2302,22 @@ Just output the raw text content.
     return 'GCash'; // Default
   }
 
-  // Detect if this is a mobile load transaction
+  /// Detect if this is a mobile load transaction
+  ///
+  /// MOBILE LOAD INDICATORS:
+  /// 1. Load/promo keywords (load, autoload, easysurf, giga, etc.)
+  /// 2. Mobile network providers (smart, globe, tnt, etc.)
+  /// 3. 9-digit reference numbers (typical for load receipts)
+  /// 4. "Paid via GCash" instead of "Sent via GCash"
+  /// 5. "Schedule for Autoload" text
+  /// 6. "Convenience Fee" instead of just "Fee"
+  ///
+  /// STRUCTURE DETECTION:
+  /// Load receipts have a distinct structure with:
+  /// - Promo name at TOP (not a person's name)
+  /// - Mobile number BELOW the promo name
+  /// - "Paid via GCash" service indicator
+  /// - Amount + Convenience Fee breakdown
   bool _isLoadTransaction(String text, String lowerText) {
     // Check for load-related keywords
     final loadKeywords = [
@@ -2236,6 +2331,9 @@ Just output the raw text content.
       'gigasurf',
       'gotscombokea',
       'giga stories',
+      'schedule for autoload',
+      'convenience fee',
+      'paid via',
     ];
 
     bool hasLoadKeyword = false;
@@ -2270,17 +2368,18 @@ Just output the raw text content.
     final nineDigitRef = RegExp(r'\b\d{9}\b');
     final hasNineDigitRef = nineDigitRef.hasMatch(text);
     if (hasNineDigitRef) {
-      print('🔍 9-digit reference number detected');
+      print('🔍 9-digit reference number detected (typical for load)');
     }
 
     // Determine if it's a load transaction:
     // 1. Has 9-digit ref number AND (has load keyword OR provider)
     // 2. OR has "autoload" or "load" keyword with provider
+    // 3. OR has "paid via" (instead of "sent via") with load keywords
     final isLoad = (hasNineDigitRef && (hasLoadKeyword || hasProvider)) ||
         (hasLoadKeyword && hasProvider);
 
     if (isLoad) {
-      print('✅ Detected as LOAD transaction');
+      print('✅ Detected as MOBILE LOAD transaction');
     }
 
     return isLoad;
