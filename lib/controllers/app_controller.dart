@@ -1,4 +1,4 @@
-import 'package:get/get.dart';
+deimport 'package:get/get.dart';
 import '../models/user_model.dart';
 import '../services/firestore_service.dart';
 
