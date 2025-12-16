@@ -699,7 +699,7 @@ class _LoginPageState extends State<LoginPage> {
                                   .fadeIn(duration: 500.ms, delay: 450.ms)
                                   .slideY(begin: 0.2, end: 0),
 
-                              const Spacer(),
+                              SizedBox(height: verticalPadding * 1.5),
 
                               // Number Keypad
                               Container(

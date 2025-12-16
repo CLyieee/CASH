@@ -297,11 +297,19 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.all(24.0),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 48,
+                  maxWidth: 600,
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
 
               // Step Indicator
               _buildStepIndicator(),
@@ -315,10 +323,13 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
 
               const SizedBox(height: 40),
 
-              // Number pad for steps 2 and 3
-              if (_currentStep >= 2) _buildNumberPad(),
-            ],
-          ),
+                    // Number pad for steps 2 and 3
+                    if (_currentStep >= 2) _buildNumberPad(),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
