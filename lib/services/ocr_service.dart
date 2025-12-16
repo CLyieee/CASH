@@ -50,7 +50,12 @@ class OCRService {
   OCRService() {
     // Only initialize ML Kit on mobile platforms
     if (!kIsWeb) {
-      _textRecognizer = TextRecognizer();
+      try {
+        _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+        print('✅ TextRecognizer initialized successfully');
+      } catch (e) {
+        print('❌ Failed to initialize TextRecognizer: $e');
+      }
     }
   }
 

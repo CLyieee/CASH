@@ -3,13 +3,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class OtpService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // EmailJS Configuration - Get these from https://dashboard.emailjs.com
-  static const String _emailJsServiceId = 'service_7s0hwbc';
+  static const String _emailJsServiceId = 'service_rarrurt';
   static const String _emailJsTemplateId = 'template_jth6447';
   static const String _emailJsPublicKey = 'KIp8xvUGMY8vCSMTH';
 
@@ -119,7 +120,12 @@ class OtpService {
 
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Origin': 'https://app.emailjs.com',
+        },
         body: json.encode({
           'service_id': _emailJsServiceId,
           'template_id': _emailJsTemplateId,
