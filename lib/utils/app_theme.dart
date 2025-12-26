@@ -10,7 +10,8 @@ class AppTheme {
       colorScheme: const ColorScheme.light(
         primary: accent,
         secondary: Color(0xFF42A5F5),
-        tertiary: Color(0xFF90CAF9),
+        // Purple accent to match the landing background palette.
+        tertiary: Color(0xFF8B7CFF),
         surface: baseBackground,
         background: baseBackground,
         onPrimary: Colors.white,

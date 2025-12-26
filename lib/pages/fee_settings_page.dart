@@ -50,13 +50,28 @@ class _FeeSettingsPageState extends State<FeeSettingsPage> {
           ),
           onPressed: () => Get.back(),
         ),
-        title: Text(
-          'Fee Configuration',
-          style: AppText.poppins(
-            color: textPrimary,
-            fontSize: ResponsiveHelper.fontSize(context, mobile: 20),
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Fee Configuration',
+              style: AppText.poppins(
+                color: textPrimary,
+                fontSize: ResponsiveHelper.fontSize(context, mobile: 20),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
         centerTitle: true,
       ),

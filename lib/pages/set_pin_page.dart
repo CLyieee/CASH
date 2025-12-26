@@ -171,13 +171,28 @@ class _SetPinPageState extends State<SetPinPage> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           automaticallyImplyLeading: false, // Remove back button
-          title: Text(
-            'Create PIN',
-            style: AppText.poppins(
-              color: textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.asset(
+                  'assets/icon/app_icon.png',
+                  width: 26,
+                  height: 26,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Create PIN',
+                style: AppText.poppins(
+                  color: textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
           centerTitle: true,
         ),

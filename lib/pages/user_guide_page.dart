@@ -15,11 +15,28 @@ class _UserGuidePageState extends State<UserGuidePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _isTagalog ? 'Gabay sa Paggamit' : 'User Guide',
-          style: TextStyle(
-            fontSize: ResponsiveHelper.fontSize(context, mobile: 20),
-          ),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                _isTagalog ? 'Gabay sa Paggamit' : 'User Guide',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 20),
+                ),
+              ),
+            ),
+          ],
         ),
         backgroundColor: Colors.blue,
         actions: [
@@ -166,10 +183,10 @@ class _UserGuidePageState extends State<UserGuidePage> {
                   : 'Your current balance (Cash In - Cash Out)',
             ),
             _buildInfoItem(
-              '📊 ${_isTagalog ? 'Kabuuang Bayad' : 'Total Fees'}',
+              '📊 ${_isTagalog ? 'Kabuuang Bayad' : 'Total Charges'}',
               _isTagalog
                   ? 'Lahat ng bayad sa transaksyon'
-                  : 'All transaction fees paid',
+                  : 'All transaction charges paid',
             ),
           ],
         ),
@@ -597,7 +614,7 @@ class _UserGuidePageState extends State<UserGuidePage> {
                   : 'What is Available Funds?',
               _isTagalog
                   ? 'Ang iyong kasalukuyang balanse: Kabuuang Cash In minus Kabuuang Cash Out (walang bayad).'
-                  : 'Your current balance: Total Cash In minus Total Cash Out (fees excluded).',
+                  : 'Your current balance: Total Cash In minus Total Cash Out (charges excluded).',
             ),
             _buildFAQItem(
               _isTagalog

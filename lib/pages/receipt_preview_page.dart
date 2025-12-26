@@ -53,7 +53,11 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
     // Auto-detect load transactions and set type to 'Load'
     if (selectedSource == 'Load' || _isLoadTransaction()) {
       selectedTransactionType = 'Load';
-      selectedSource = 'Load';
+      selectedSource = 'GCash'; // Load uses GCash as source
+    } else if (widget.receipt.transactionType == 'bank_transfer') {
+      // For bank transfers, set type but keep GCash as source
+      selectedTransactionType = 'Bank Transfer';
+      selectedSource = 'GCash'; // Bank transfer uses GCash as source
     } else {
       // Ensure selected source exists in options
       if (!sourceOptions.contains(selectedSource)) {
@@ -123,13 +127,30 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
           ),
           onPressed: () => Get.back(),
         ),
-        title: Text(
-          'Receipt Preview',
-          style: AppText.poppins(
-            color: colorScheme.onSurface,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-          ),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                'Receipt Preview',
+                overflow: TextOverflow.ellipsis,
+                style: AppText.poppins(
+                  color: colorScheme.onSurface,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ),
         centerTitle: false,
       ),
@@ -471,7 +492,7 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
 
               // Title
               Text(
-                'Fee Handling',
+                'Charge Handling',
                 style: AppText.poppins(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -483,7 +504,7 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
 
               // Message
               Text(
-                'Is the fee already included in the amount or paid in cash?',
+                'Is the charge already included in the amount or paid in cash?',
                 style: AppText.poppins(
                   fontSize: 14,
                   color: colorScheme.onSurfaceVariant,
@@ -508,7 +529,7 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
                     ),
                   ),
                   child: Text(
-                    'Fee Included in Amount',
+                    'Charge Included in Amount',
                     style: AppText.poppins(
                       color: colorScheme.onPrimary,
                       fontSize: 15,
@@ -536,7 +557,7 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
                     ),
                   ),
                   child: Text(
-                    'Fee is Cash',
+                    'Charge is Cash',
                     style: AppText.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -682,10 +703,8 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
         totalAmount: amount,
         refNumber: refNumber,
         date: DateTime.now(),
-        source: isLoadTransaction ? 'Load' : selectedSource,
-        transactionType: selectedTransactionType == 'Load'
-            ? 'Cash Out'
-            : selectedTransactionType,
+        source: selectedSource,
+        transactionType: selectedTransactionType,
         createdAt: DateTime.now(),
         separateFee: separateFee,
       );
@@ -998,10 +1017,11 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
       _buildDivider(colorScheme),
       // Load Amount
       _buildInfoRow(colorScheme, 'Load Amount',
-          currencyFormat.format(widget.receipt.amount), Icons.attach_money),
+          currencyFormat.format(widget.receipt.amount), Icons.attach_money,
+          leading: _buildPesoLeading(colorScheme)),
       _buildDivider(colorScheme),
       // Convenience Fee
-      _buildInfoRow(colorScheme, 'Convenience Fee',
+      _buildInfoRow(colorScheme, 'Convenience Charge',
           currencyFormat.format(widget.receipt.fee), Icons.receipt_long),
       _buildDivider(colorScheme),
       // Total Amount
@@ -1050,9 +1070,10 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
         _buildDivider(colorScheme),
       ],
       _buildInfoRow(colorScheme, 'Transfer Amount',
-          currencyFormat.format(widget.receipt.amount), Icons.attach_money),
+          currencyFormat.format(widget.receipt.amount), Icons.attach_money,
+          leading: _buildPesoLeading(colorScheme)),
       _buildDivider(colorScheme),
-      _buildInfoRow(colorScheme, 'Bank Fee',
+      _buildInfoRow(colorScheme, 'Bank Charge',
           currencyFormat.format(widget.receipt.fee), Icons.receipt_long),
       _buildDivider(colorScheme),
       _buildInfoRow(
@@ -1072,8 +1093,6 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
         dateFormat.format(widget.receipt.date),
         Icons.calendar_today,
       ),
-      _buildDivider(colorScheme),
-      _buildSourceDropdown(colorScheme),
     ];
   }
 
@@ -1088,9 +1107,10 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
           colorScheme, 'Phone Number', widget.receipt.phoneNumber, Icons.phone),
       _buildDivider(colorScheme),
       _buildInfoRow(colorScheme, 'Amount',
-          currencyFormat.format(widget.receipt.amount), Icons.attach_money),
+          currencyFormat.format(widget.receipt.amount), Icons.attach_money,
+          leading: _buildPesoLeading(colorScheme)),
       _buildDivider(colorScheme),
-      _buildInfoRow(colorScheme, 'Fee',
+      _buildInfoRow(colorScheme, 'Charge',
           currencyFormat.format(widget.receipt.fee), Icons.receipt_long),
       _buildDivider(colorScheme),
       _buildInfoRow(
@@ -1121,6 +1141,7 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
     String value,
     IconData icon, {
     bool isHighlighted = false,
+    Widget? leading,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1147,12 +1168,14 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
                   isHighlighted ? null : colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              icon,
-              color:
-                  isHighlighted ? colorScheme.onPrimary : colorScheme.primary,
-              size: 20,
-            ),
+            child: leading ??
+                Icon(
+                  icon,
+                  color: isHighlighted
+                      ? colorScheme.onPrimary
+                      : colorScheme.primary,
+                  size: 20,
+                ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -1183,6 +1206,17 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPesoLeading(ColorScheme colorScheme) {
+    return Text(
+      '₱',
+      style: AppText.poppins(
+        color: colorScheme.primary,
+        fontSize: 18,
+        fontWeight: FontWeight.w800,
       ),
     );
   }

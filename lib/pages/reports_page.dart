@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:g/utils/responsive_helper.dart';
 import '../controllers/app_controller.dart';
 import '../services/transaction_service.dart';
 import '../services/report_service.dart';
@@ -138,13 +137,30 @@ class _ReportsPageState extends State<ReportsPage> {
             size: 20,
           ),
         ),
-        title: Text(
-          'Export Reports',
-          style: AppText.poppins(
-            color: colorScheme.onSurface,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                'Export Reports',
+                overflow: TextOverflow.ellipsis,
+                style: AppText.poppins(
+                  color: colorScheme.onSurface,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
       body: Stack(

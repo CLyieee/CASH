@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:g/utils/app_text.dart';
-import 'package:g/utils/responsive_helper.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import '../services/ocr_service.dart';
@@ -170,13 +169,30 @@ class _ScanPageState extends State<ScanPage> {
               color: palette.textPrimary, size: 20),
           onPressed: () => Get.back(),
         ),
-        title: Text(
-          'Scan Receipt',
-          style: AppText.poppins(
-            color: palette.textPrimary,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                'Scan Receipt',
+                overflow: TextOverflow.ellipsis,
+                style: AppText.poppins(
+                  color: palette.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
         centerTitle: false,
       ),
@@ -404,30 +420,6 @@ class _ScanPageState extends State<ScanPage> {
 
           const SizedBox(height: 32),
 
-          // Camera Button (hidden on web)
-          if (!kIsWeb)
-            FilledButton.icon(
-              onPressed: () => _pickAndProcessImage(fromCamera: true),
-              icon: const Icon(Icons.camera_alt_rounded, size: 24),
-              label: Text(
-                'Take Photo',
-                style: AppText.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              style: FilledButton.styleFrom(
-                backgroundColor: palette.accentBlue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-            ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.1, end: 0),
-
-          if (!kIsWeb) const SizedBox(height: 16),
-
           // Gallery/Upload Button
           FilledButton.icon(
             onPressed: () => _pickAndProcessImage(fromCamera: false),
@@ -450,7 +442,31 @@ class _ScanPageState extends State<ScanPage> {
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-          ).animate().fadeIn(delay: 400.ms).slideX(begin: 0.1, end: 0),
+          ).animate().fadeIn(delay: 300.ms).slideX(begin: 0.1, end: 0),
+
+          if (!kIsWeb) const SizedBox(height: 16),
+
+          // Camera Button (hidden on web)
+          if (!kIsWeb)
+            FilledButton.icon(
+              onPressed: () => _pickAndProcessImage(fromCamera: true),
+              icon: const Icon(Icons.camera_alt_rounded, size: 24),
+              label: Text(
+                'Take Photo',
+                style: AppText.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: palette.accentBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ).animate().fadeIn(delay: 400.ms).slideX(begin: -0.1, end: 0),
 
           const SizedBox(height: 32),
 
@@ -484,7 +500,7 @@ class _ScanPageState extends State<ScanPage> {
                 _buildFeatureItem(palette, 'Recipient name'),
                 _buildFeatureItem(palette, 'Phone number'),
                 _buildFeatureItem(palette, 'Amount sent'),
-                _buildFeatureItem(palette, 'Transaction fee'),
+                _buildFeatureItem(palette, 'Transaction charge'),
                 _buildFeatureItem(palette, 'Reference number'),
                 _buildFeatureItem(palette, 'Date & time'),
               ],

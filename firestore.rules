@@ -37,7 +37,7 @@ service cloud.firestore {
                     && request.resource.data.keys().hasAll(['userId', 'amount', 'transactionType', 'createdAt'])
                     && request.resource.data.amount is number
                     && request.resource.data.amount > 0
-                    && request.resource.data.transactionType in ['Cash In', 'Cash Out'];
+                    && request.resource.data.transactionType in ['Cash In', 'Cash Out', 'Load', 'Bank Transfer'];
       
       // Update: only if user owns the transaction
       allow update: if isAuthenticated() 

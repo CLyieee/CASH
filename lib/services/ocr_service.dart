@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart';
 import 'gemini_service.dart';
+import '../utils/image_file_utils.dart';
 
 /// OCRService - Standalone OCR with intelligent GCash receipt structure detection
 ///
@@ -47,16 +48,41 @@ class OCRService {
   final GeminiService _geminiService = GeminiService();
   XFile? _lastPickedImage; // Store the XFile for web access
 
-  OCRService() {
-    // Only initialize ML Kit on mobile platforms
-    if (!kIsWeb) {
-      try {
-        _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
-        print('✅ TextRecognizer initialized successfully');
-      } catch (e) {
-        print('❌ Failed to initialize TextRecognizer: $e');
-      }
+  bool get _isMlKitSupportedPlatform {
+    if (kIsWeb) return false;
+
+    // Prefer dart:io Platform checks for plugin support.
+    // defaultTargetPlatform can be misleading in some edge environments.
+    try {
+      return Platform.isAndroid || Platform.isIOS;
+    } catch (_) {
+      return false;
     }
+  }
+
+  bool _ensureTextRecognizerInitialized() {
+    if (_textRecognizer != null) return true;
+    if (!_isMlKitSupportedPlatform) {
+      print('ℹ️ ML Kit OCR not supported on this platform');
+      return false;
+    }
+
+    try {
+      _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+      print('✅ TextRecognizer initialized successfully');
+      return true;
+    } catch (e) {
+      // This can happen if the plugin isn't available on the current platform
+      // or if initialization fails for any other reason.
+      print('❌ Failed to initialize TextRecognizer: $e');
+      _textRecognizer = null;
+      return false;
+    }
+  }
+
+  OCRService() {
+    // Lazy-init also exists, but try to init early on supported platforms.
+    _ensureTextRecognizerInitialized();
   }
 
   // Pick image from gallery or camera
@@ -70,7 +96,7 @@ class OCRService {
 
       if (image != null) {
         _lastPickedImage = image; // Store for web access
-        final imageFile = File(image.path);
+        final imageFile = await ImageFileUtils.materializeToFile(image);
 
         // Auto-save to app directory if taken from camera
         if (fromCamera) {
@@ -132,7 +158,7 @@ class OCRService {
 
     // Check for currency symbols/indicators (strong indicator)
     final currencyPatterns = [
-      RegExp(r'[₱\$€£¥]'), // Currency symbols
+      RegExp(r'[₱€£¥]'), // Currency symbols
       RegExp(r'\bphp\b|\bpeso\b|\busd\b|\bdollar\b', caseSensitive: false),
     ];
     for (var pattern in currencyPatterns) {
@@ -144,7 +170,7 @@ class OCRService {
     }
 
     // Check for price patterns (very strong indicator)
-    final pricePattern = RegExp(r'[₱\$]?\s*\d{1,3}(?:,\d{3})*\.\d{2}');
+  final pricePattern = RegExp(r'₱?\s*\d{1,3}(?:,\d{3})*\.\d{2}');
     final priceMatches = pricePattern.allMatches(text).length;
     if (priceMatches >= 2) {
       validationScore += 4;
@@ -284,9 +310,17 @@ class OCRService {
         return await _processReceiptWithGemini(imageFile, feeRanges);
       }
 
-      if (_textRecognizer == null) {
+      // On unsupported platforms (e.g., Windows/macOS/Linux), ML Kit OCR won't work.
+      // Fail with a clear message rather than returning null.
+      if (!_isMlKitSupportedPlatform) {
+        throw Exception(
+            'OCR is not supported on this platform. Please use Gemini AI mode or run on Android/iOS.');
+      }
+
+      if (!_ensureTextRecognizerInitialized()) {
         print('❌ Text recognizer not initialized');
-        return null;
+        throw Exception(
+            'OCR engine failed to initialize. Please restart the app and try again.');
       }
 
       final InputImage inputImage = InputImage.fromFile(imageFile);

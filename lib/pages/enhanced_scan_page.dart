@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import '../services/gemini_service.dart';
 import '../services/ocr_service.dart';
+import '../utils/image_file_utils.dart';
 import '../services/notification_service.dart';
 import '../controllers/app_controller.dart';
 import '../models/receipt_model.dart';
@@ -86,7 +86,7 @@ class _EnhancedScanPageState extends State<EnhancedScanPage> {
         return;
       }
 
-      final imageFile = File(image.path);
+      final imageFile = await ImageFileUtils.materializeToFile(image);
       ReceiptModel? receipt;
 
       if (useGemini) {
@@ -157,13 +157,30 @@ class _EnhancedScanPageState extends State<EnhancedScanPage> {
     return Scaffold(
       backgroundColor: palette.background,
       appBar: AppBar(
-        title: Text(
-          'Scan Receipt',
-          style: AppText.poppins(
-            color: palette.textPrimary,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                'Scan Receipt',
+                overflow: TextOverflow.ellipsis,
+                style: AppText.poppins(
+                  color: palette.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
         backgroundColor: palette.cardSurface,
         elevation: 0,
@@ -312,29 +329,6 @@ class _EnhancedScanPageState extends State<EnhancedScanPage> {
             ),
           const SizedBox(height: 40),
 
-          // Camera Button
-          FilledButton.icon(
-            onPressed: () => _pickAndProcessImage(fromCamera: true),
-            icon: Icon(Icons.camera_alt_rounded,
-                size: ResponsiveHelper.iconSize(context, base: 24)),
-            label: Text(
-              'Take Photo',
-              style: AppText.poppins(
-                  fontSize: ResponsiveHelper.fontSize(context, mobile: 18),
-                  fontWeight: FontWeight.w600),
-            ),
-            style: FilledButton.styleFrom(
-              backgroundColor: palette.accentBlue,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(
-                  vertical: ResponsiveHelper.spacing(context, mobile: 18)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
           // Gallery Button
           OutlinedButton.icon(
             onPressed: () => _pickAndProcessImage(fromCamera: false),
@@ -354,6 +348,29 @@ class _EnhancedScanPageState extends State<EnhancedScanPage> {
                 borderRadius: BorderRadius.circular(16),
               ),
               side: BorderSide(color: palette.accentBlue, width: 2),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Camera Button
+          FilledButton.icon(
+            onPressed: () => _pickAndProcessImage(fromCamera: true),
+            icon: Icon(Icons.camera_alt_rounded,
+                size: ResponsiveHelper.iconSize(context, base: 24)),
+            label: Text(
+              'Take Photo',
+              style: AppText.poppins(
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 18),
+                  fontWeight: FontWeight.w600),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: palette.accentBlue,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(
+                  vertical: ResponsiveHelper.spacing(context, mobile: 18)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
           const SizedBox(height: 32),
@@ -395,7 +412,7 @@ class _EnhancedScanPageState extends State<EnhancedScanPage> {
           _buildInfoItem('Recipient Name', palette),
           _buildInfoItem('Phone Number', palette),
           _buildInfoItem('Amount Sent', palette),
-          _buildInfoItem('Transaction Fee', palette),
+          _buildInfoItem('Transaction Charge', palette),
           _buildInfoItem('Reference Number', palette),
           _buildInfoItem('Date & Time', palette),
           _buildInfoItem('Service Provider', palette),

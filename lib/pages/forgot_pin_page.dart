@@ -11,34 +11,16 @@ import 'login_page.dart';
 class _ForgotPinPalette {
   _ForgotPinPalette(ThemeData theme)
       : isDark = theme.brightness == Brightness.dark,
-        background = theme.brightness == Brightness.dark
-            ? const Color(0xFF0D1117)
-            : const Color(0xFFFCFCFF),
-        surfaceContainer = theme.brightness == Brightness.dark
-            ? const Color(0xFF1C2128)
-            : const Color(0xFFF3F3F6),
-        cardSurface = theme.brightness == Brightness.dark
-            ? const Color(0xFF1C2128)
-            : Colors.white,
-        cardBorder = theme.brightness == Brightness.dark
-            ? Colors.white.withOpacity(0.06)
-            : Colors.black.withOpacity(0.04),
-        textPrimary = theme.colorScheme.onSurface,
-        textSecondary = theme.brightness == Brightness.dark
-            ? const Color(0xFF9CA3AF)
-            : const Color(0xFF6B7280),
-        primary = theme.brightness == Brightness.dark
-            ? const Color(0xFF93C5FD)
-            : const Color(0xFF2563EB),
-        primaryContainer = theme.brightness == Brightness.dark
-            ? const Color(0xFF1E3A5F)
-            : const Color(0xFFDBEAFE),
-        onPrimaryContainer = theme.brightness == Brightness.dark
-            ? const Color(0xFFDBEAFE)
-            : const Color(0xFF1E3A5F),
-        surfaceContainerHighest = theme.brightness == Brightness.dark
-            ? const Color(0xFF262C36)
-            : const Color(0xFFEAEAED);
+        background = Colors.transparent,
+        surfaceContainer = Colors.white.withOpacity(0.1),
+        cardSurface = Colors.white.withOpacity(0.15),
+        cardBorder = Colors.white.withOpacity(0.2),
+        textPrimary = Colors.white,
+        textSecondary = Colors.white.withOpacity(0.7),
+        primary = const Color(0xFF93C5FD),
+        primaryContainer = Colors.white.withOpacity(0.2),
+        onPrimaryContainer = Colors.white,
+        surfaceContainerHighest = Colors.white.withOpacity(0.15);
 
   final bool isDark;
   final Color background;
@@ -277,51 +259,106 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
     final palette = _ForgotPinPalette(theme);
 
     return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        backgroundColor: palette.background,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: palette.textPrimary),
-          onPressed: () => Get.back(),
+        body: Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/images/space_background.png'),
+          fit: BoxFit.cover,
         ),
-        title: Text(
-          'Reset PIN',
-          style: AppText.poppins(
-            color: palette.textPrimary,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded, color: palette.textPrimary),
+            onPressed: () => Get.back(),
+          ),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 20),
-
-              // Step Indicator
-              _buildStepIndicator(),
-
-              const SizedBox(height: 40),
-
-              // Content based on current step
-              if (_currentStep == 1) _buildRequestOTPStep(),
-              if (_currentStep == 2) _buildVerifyOTPStep(),
-              if (_currentStep == 3) _buildSetNewPINStep(),
-
-              const SizedBox(height: 40),
-
-              // Number pad for steps 2 and 3
-              if (_currentStep >= 2) _buildNumberPad(),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.asset(
+                  'assets/icon/app_icon.png',
+                  width: 26,
+                  height: 26,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Reset PIN',
+                style: AppText.poppins(
+                  color: palette.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
+          centerTitle: true,
+        ),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 360;
+              final buttonSize = isNarrow ? 62.0 : 70.0;
+              final gap = isNarrow ? 12.0 : 16.0;
+
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: constraints.maxWidth < 360 ? 16 : 24,
+                      vertical: 16,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            physics: const ClampingScrollPhysics(),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(height: 10),
+                                _buildStepIndicator(),
+                                const SizedBox(height: 30),
+                                if (_currentStep == 1) _buildRequestOTPStep(),
+                                if (_currentStep == 2) _buildVerifyOTPStep(),
+                                if (_currentStep == 3) _buildSetNewPINStep(),
+                                if (_currentStep >= 2)
+                                  const SizedBox(height: 20),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (_currentStep >= 2)
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.bottomCenter,
+                              child: _buildNumberPad(
+                                buttonSize: buttonSize,
+                                gap: gap,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildStepIndicator() {
@@ -639,49 +676,49 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
     );
   }
 
-  Widget _buildNumberPad() {
+  Widget _buildNumberPad({required double buttonSize, required double gap}) {
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildNumberButton('1'),
-            _buildNumberButton('2'),
-            _buildNumberButton('3'),
+            _buildNumberButton('1', buttonSize),
+            _buildNumberButton('2', buttonSize),
+            _buildNumberButton('3', buttonSize),
           ],
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: gap),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildNumberButton('4'),
-            _buildNumberButton('5'),
-            _buildNumberButton('6'),
+            _buildNumberButton('4', buttonSize),
+            _buildNumberButton('5', buttonSize),
+            _buildNumberButton('6', buttonSize),
           ],
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: gap),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildNumberButton('7'),
-            _buildNumberButton('8'),
-            _buildNumberButton('9'),
+            _buildNumberButton('7', buttonSize),
+            _buildNumberButton('8', buttonSize),
+            _buildNumberButton('9', buttonSize),
           ],
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: gap),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            const SizedBox(width: 70, height: 70),
-            _buildNumberButton('0'),
-            _buildDeleteButton(),
+            SizedBox(width: buttonSize, height: buttonSize),
+            _buildNumberButton('0', buttonSize),
+            _buildDeleteButton(buttonSize),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildNumberButton(String number) {
+  Widget _buildNumberButton(String number, double buttonSize) {
     final theme = Theme.of(context);
     final palette = _ForgotPinPalette(theme);
 
@@ -691,8 +728,8 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
         onTap: () => _onNumberPressed(number),
         customBorder: const CircleBorder(),
         child: Container(
-          width: 70,
-          height: 70,
+          width: buttonSize,
+          height: buttonSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: palette.surfaceContainerHighest,
@@ -711,7 +748,7 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
               number,
               style: AppText.poppins(
                 color: palette.textPrimary,
-                fontSize: 28,
+                fontSize: buttonSize * 0.4,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -721,7 +758,7 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
     );
   }
 
-  Widget _buildDeleteButton() {
+  Widget _buildDeleteButton(double buttonSize) {
     final theme = Theme.of(context);
     final palette = _ForgotPinPalette(theme);
 
@@ -731,8 +768,8 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
         onTap: _onDeletePressed,
         customBorder: const CircleBorder(),
         child: Container(
-          width: 70,
-          height: 70,
+          width: buttonSize,
+          height: buttonSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: palette.surfaceContainerHighest,
@@ -750,7 +787,7 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
             child: Icon(
               Icons.backspace_outlined,
               color: palette.textPrimary,
-              size: 24,
+              size: buttonSize * 0.34,
             ),
           ),
         ),

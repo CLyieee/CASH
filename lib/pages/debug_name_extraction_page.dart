@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../services/gemini_service.dart';
+import '../utils/image_file_utils.dart';
 
 /// Debug page to test name extraction from receipts
 class DebugNameExtractionPage extends StatefulWidget {
@@ -32,8 +33,9 @@ class _DebugNameExtractionPageState extends State<DebugNameExtractionPage> {
       );
 
       if (image != null) {
+        final file = await ImageFileUtils.materializeToFile(image);
         setState(() {
-          _selectedImage = File(image.path);
+          _selectedImage = file;
           _extractedName = null;
           _fullText = null;
           _fullResponse = null;
@@ -86,7 +88,26 @@ class _DebugNameExtractionPageState extends State<DebugNameExtractionPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFE0E5EC),
       appBar: AppBar(
-        title: const Text('Debug Name Extraction'),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Flexible(
+              child: Text(
+                'Debug Name Extraction',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
         backgroundColor: const Color(0xFFE0E5EC),
         elevation: 0,
       ),

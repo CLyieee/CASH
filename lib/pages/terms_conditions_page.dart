@@ -41,13 +41,30 @@ class TermsConditionsPage extends StatelessWidget {
             ),
           ),
         ),
-        title: Text(
-          'Terms & Conditions',
-          style: AppText.poppins(
-            color: textPrimary,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                'Terms & Conditions',
+                overflow: TextOverflow.ellipsis,
+                style: AppText.poppins(
+                  color: textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
       body: SingleChildScrollView(

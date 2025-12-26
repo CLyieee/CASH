@@ -769,7 +769,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
-                    'Sign out',
+                    'Logout',
                     style: AppText.poppins(
                       color: palette.error,
                       fontSize: 15,
