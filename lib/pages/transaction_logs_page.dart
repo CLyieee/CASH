@@ -798,7 +798,7 @@ class _TransactionLogsPageState extends State<TransactionLogsPage> {
                 _buildDetailRow('Amount',
                     currencyFormat.format(transaction.amount), palette),
                 _buildDetailRow(
-                    'Fee', currencyFormat.format(transaction.fee), palette),
+                    'Charge', currencyFormat.format(transaction.fee), palette),
                 _buildDetailRow('Total',
                     currencyFormat.format(transaction.totalAmount), palette),
                 _buildDetailRow('Ref Number', transaction.refNumber, palette),

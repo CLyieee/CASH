@@ -49,6 +49,8 @@
 	<string>This app needs access to the microphone for voice chat with AI assistant</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>This app needs speech recognition to convert your voice to text for AI chat</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs access to your camera to scan receipt images</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>This app needs permission to save receipt images to your photo library</string>
 	<key>NSPhotoLibraryUsageDescription</key>

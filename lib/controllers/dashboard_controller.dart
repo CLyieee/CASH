@@ -19,10 +19,40 @@ class DashboardController extends GetxController {
   var separateFeeBreakdown = <String, double>{}.obs; // Separate fees by source
   var isLoading = false.obs;
   var selectedPeriod = 'Daily'.obs;
+  var viewMode = 'Daily'.obs; // 'Daily' or 'Overall'
+
+  // Daily stats
+  var dailyCashIn = 0.0.obs;
+  var dailyCashOut = 0.0.obs;
+  var dailyLoad = 0.0.obs;
+  var dailyFees = 0.0.obs;
+  var dailySeparateFees = 0.0.obs;
+  var dailyTransactions = 0.obs;
 
   void setPeriod(String period) {
     selectedPeriod.value = period;
   }
+
+  void setViewMode(String mode) {
+    viewMode.value = mode;
+  }
+
+  // Get current displayed values based on view mode
+  double get displayedCashIn =>
+      viewMode.value == 'Daily' ? dailyCashIn.value : totalCashIn.value;
+  double get displayedCashOut =>
+      viewMode.value == 'Daily' ? dailyCashOut.value : totalCashOut.value;
+  double get displayedLoad =>
+      viewMode.value == 'Daily' ? dailyLoad.value : totalLoad.value;
+  double get displayedFees =>
+      viewMode.value == 'Daily' ? dailyFees.value : totalFees.value;
+  double get displayedSeparateFees => viewMode.value == 'Daily'
+      ? dailySeparateFees.value
+      : totalSeparateFees.value;
+  int get displayedTransactions => viewMode.value == 'Daily'
+      ? dailyTransactions.value
+      : totalTransactions.value;
+  double get displayedBalance => displayedCashIn + displayedCashOut;
 
   Map<String, double> getChartData() {
     if (recentTransactions.isEmpty) return {};
@@ -126,23 +156,54 @@ class DashboardController extends GetxController {
       Map<String, double> feesBySource = {};
       Map<String, double> separateFeesBySource = {};
 
+      // Daily stats
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day);
+      double dailyCash = 0;
+      double dailyOut = 0;
+      double dailyLoadAmount = 0;
+      double dailyFee = 0;
+      double dailySepFee = 0;
+      int dailyCount = 0;
+
       for (var transaction in transactions) {
+        // Check if transaction is from today
+        final transDate = transaction.createdAt;
+        final transStart =
+            DateTime(transDate.year, transDate.month, transDate.day);
+        final isToday = transStart.isAtSameMomentAs(todayStart);
+
         // Track load transactions separately
         if (transaction.source == 'Load') {
           load += transaction.amount + transaction.separateFee;
+          if (isToday) {
+            dailyLoadAmount += transaction.amount + transaction.separateFee;
+          }
         }
 
         if (transaction.transactionType == 'Cash In') {
           cashIn += transaction.amount;
           available += transaction.amount;
+          if (isToday) {
+            dailyCash += transaction.amount;
+          }
         } else {
           cashOut += transaction.amount;
           available -= transaction.amount;
           // Deduct fees only from Cash Out transactions
           available -= transaction.fee;
+          if (isToday) {
+            dailyOut += transaction.amount;
+          }
         }
         fees += transaction.fee;
         separateFees += transaction.separateFee;
+
+        if (isToday) {
+          dailyFee += transaction.fee;
+          dailySepFee += transaction.separateFee;
+          dailyCount++;
+        }
 
         sources[transaction.source] =
             (sources[transaction.source] ?? 0) + transaction.amount;
@@ -169,6 +230,14 @@ class DashboardController extends GetxController {
       sourceBreakdown.value = sources;
       feeBreakdown.value = feesBySource;
       separateFeeBreakdown.value = separateFeesBySource;
+
+      // Update daily stats
+      dailyCashIn.value = dailyCash;
+      dailyCashOut.value = dailyOut;
+      dailyLoad.value = dailyLoadAmount;
+      dailyFees.value = dailyFee;
+      dailySeparateFees.value = dailySepFee;
+      dailyTransactions.value = dailyCount;
     });
   }
 }

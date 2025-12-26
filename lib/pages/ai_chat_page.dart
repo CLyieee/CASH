@@ -6,6 +6,7 @@ import 'dart:io';
 import '../controllers/gemini_controller.dart';
 import '../utils/app_text.dart';
 import 'package:g/utils/responsive_helper.dart';
+import '../utils/image_file_utils.dart';
 
 class _AIChatPalette {
   _AIChatPalette(ThemeData theme)
@@ -591,6 +592,7 @@ class _AIChatPageState extends State<AIChatPage> {
       );
 
       if (image != null) {
+        final file = await ImageFileUtils.materializeToFile(image);
         // Show loading indicator while validating
         Get.dialog(
           const Center(
@@ -600,13 +602,13 @@ class _AIChatPageState extends State<AIChatPage> {
         );
 
         // Validate if the image looks like a receipt
-        final isReceipt = await _validateReceiptImage(File(image.path));
+        final isReceipt = await _validateReceiptImage(file);
 
         Get.back(); // Close loading dialog
 
         if (isReceipt) {
           setState(() {
-            _selectedImage = File(image.path);
+            _selectedImage = file;
           });
         } else {
           Get.snackbar(

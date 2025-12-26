@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import '../utils/image_file_utils.dart';
 import '../controllers/gemini_controller.dart';
 import '../services/notification_service.dart';
 import 'package:g/utils/responsive_helper.dart';
@@ -38,8 +39,9 @@ class _CustomImageAnalysisPageState extends State<CustomImageAnalysisPage> {
     try {
       final XFile? image = await _picker.pickImage(source: source);
       if (image != null) {
+        final file = await ImageFileUtils.materializeToFile(image);
         setState(() {
-          _selectedImage = File(image.path);
+          _selectedImage = file;
           _receiptData = null;
           _customAnalysis = null;
         });
@@ -146,7 +148,26 @@ class _CustomImageAnalysisPageState extends State<CustomImageAnalysisPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFE0E5EC),
       appBar: AppBar(
-        title: const Text('Custom Image Analysis'),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Flexible(
+              child: Text(
+                'Custom Image Analysis',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
         backgroundColor: const Color(0xFFE0E5EC),
         elevation: 0,
       ),

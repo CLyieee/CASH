@@ -108,13 +108,30 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
             size: ResponsiveHelper.iconSize(context, base: 20),
           ),
         ),
-        title: Text(
-          'Transaction Calendar',
-          style: AppText.poppins(
-            color: textPrimary,
-            fontSize: ResponsiveHelper.fontSize(context, mobile: 20),
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                'Transaction Calendar',
+                overflow: TextOverflow.ellipsis,
+                style: AppText.poppins(
+                  color: textPrimary,
+                  fontSize: ResponsiveHelper.fontSize(context, mobile: 20),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -618,7 +635,7 @@ class _CalendarViewPageState extends State<CalendarViewPage> {
               ),
               if (!isCashIn && transaction.fee > 0)
                 Text(
-                  'Fee: ${currencyFormat.format(transaction.fee)}',
+                  'Charge: ${currencyFormat.format(transaction.fee)}',
                   style: AppText.poppins(
                     color: textSecondary,
                     fontSize: ResponsiveHelper.fontSize(context, mobile: 11),

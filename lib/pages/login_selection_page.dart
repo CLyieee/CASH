@@ -145,190 +145,246 @@ class LoginSelectionPage extends StatelessWidget {
     final subtitleSize = isCompact ? 13.0 : (isSmall ? 14.0 : 15.0);
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
-                child: IntrinsicHeight(
-                  child: Column(
-                    children: [
-                      SizedBox(height: topSpacing),
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/space_background.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      children: [
+                        SizedBox(height: topSpacing),
 
-                      // App icon
-                      Container(
-                        width: iconSize,
-                        height: iconSize,
-                        decoration: BoxDecoration(
-                          borderRadius:
-                              BorderRadius.circular(isCompact ? 20 : 24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF64B5F6).withOpacity(0.2),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: Image.asset(
-                            'assets/icon/app_icon.jpg',
-                            fit: BoxFit.cover,
+                        // App icon
+                        Container(
+                          width: iconSize,
+                          height: iconSize,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E88E5),
+                            borderRadius:
+                                BorderRadius.circular(isCompact ? 20 : 24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF1E88E5).withOpacity(0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
                           ),
-                        ),
-                      )
-                          .animate()
-                          .scale(duration: 600.ms, curve: Curves.easeOutBack),
+                          child: Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: iconSize * 0.12,
+                                vertical: iconSize * 0.10,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: iconSize * 0.52,
+                                    height: iconSize * 0.52,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: isCompact ? 3.5 : 4.5,
+                                        ),
+                                        borderRadius: BorderRadius.circular(
+                                          isCompact ? 12 : 14,
+                                        ),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          'RP',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: iconSize * 0.22,
+                                            fontWeight: FontWeight.w900,
+                                            fontFamily: 'Poppins',
+                                            letterSpacing: 0,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: iconSize * 0.06),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      'ReciPay',
+                                      textAlign: TextAlign.center,
+                                      style: AppText.poppins(
+                                        color: Colors.white,
+                                        fontSize: iconSize * 0.18,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                            .animate()
+                            .scale(duration: 600.ms, curve: Curves.easeOutBack),
 
-                      SizedBox(height: isShortScreen ? 20 : 32),
+                        SizedBox(height: isShortScreen ? 20 : 32),
 
-                      // Title with gradient effect
-                      ShaderMask(
-                        shaderCallback: (bounds) => const LinearGradient(
-                          colors: [
-                            Color(0xFF64B5F6),
-                            Color(0xFF42A5F5),
-                            Color(0xFF1E88E5),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ).createShader(bounds),
-                        child: Text(
-                          'Welcome Back',
+                        // Title with gradient effect
+                        ShaderMask(
+                          shaderCallback: (bounds) => const LinearGradient(
+                            colors: [
+                              Color(0xFF64B5F6),
+                              Color(0xFF42A5F5),
+                              Color(0xFF1E88E5),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ).createShader(bounds),
+                          child: Text(
+                            'Welcome Back',
+                            style: AppText.poppins(
+                              color: Colors.white,
+                              fontSize: titleSize,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -1,
+                            ),
+                          ),
+                        )
+                            .animate()
+                            .fadeIn(duration: 600.ms)
+                            .slideY(begin: -0.2, end: 0),
+
+                        SizedBox(height: isCompact ? 8 : 12),
+
+                        Text(
+                          'Sign in to continue managing your finances',
+                          textAlign: TextAlign.center,
                           style: AppText.poppins(
-                            color: Colors.white,
-                            fontSize: titleSize,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -1,
+                            color: Colors.white.withOpacity(0.75),
+                            fontSize: subtitleSize,
+                            fontWeight: FontWeight.w500,
+                            height: 1.5,
                           ),
+                        )
+                            .animate()
+                            .fadeIn(duration: 600.ms, delay: 100.ms)
+                            .slideY(begin: -0.2, end: 0, delay: 100.ms),
+
+                        SizedBox(height: isShortScreen ? 40 : 60),
+
+                        // Sign-in with Google
+                        _buildModernOption(
+                          context: context,
+                          imagePath: 'assets/images/google_logo.png',
+                          title: 'Continue with Google',
+                          subtitle: 'Choose from your accounts',
+                          onTap: _handleGoogleSignIn,
+                          delay: 200,
+                          color: const Color(0xFF64B5F6),
                         ),
-                      )
-                          .animate()
-                          .fadeIn(duration: 600.ms)
-                          .slideY(begin: -0.2, end: 0),
 
-                      SizedBox(height: isCompact ? 8 : 12),
+                        const Spacer(),
+                        SizedBox(height: isShortScreen ? 40 : 80),
 
-                      Text(
-                        'Sign in to continue managing your finances',
-                        textAlign: TextAlign.center,
-                        style: AppText.poppins(
-                          color: const Color(0xFF6B7280),
-                          fontSize: subtitleSize,
-                          fontWeight: FontWeight.w500,
-                          height: 1.5,
-                        ),
-                      )
-                          .animate()
-                          .fadeIn(duration: 600.ms, delay: 100.ms)
-                          .slideY(begin: -0.2, end: 0, delay: 100.ms),
-
-                      SizedBox(height: isShortScreen ? 40 : 60),
-
-                      // Sign-in with Google
-                      _buildModernOption(
-                        context: context,
-                        icon: Icons.g_mobiledata_rounded,
-                        title: 'Continue with Google',
-                        subtitle: 'Choose from your accounts',
-                        onTap: _handleGoogleSignIn,
-                        delay: 200,
-                        color: const Color(0xFF64B5F6),
-                      ),
-
-                      const Spacer(),
-                      SizedBox(height: isShortScreen ? 40 : 80),
-
-                      // Terms
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF9FAFB),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFFE5E7EB),
-                            width: 1,
+                        // Terms
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFFE5E7EB),
+                              width: 1,
+                            ),
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF64B5F6).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color:
+                                      const Color(0xFF64B5F6).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.lock_outline_rounded,
+                                  color: Color(0xFF64B5F6),
+                                  size: 20,
+                                ),
                               ),
-                              child: const Icon(
-                                Icons.lock_outline_rounded,
-                                color: Color(0xFF64B5F6),
-                                size: 20,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Your data is secure and encrypted',
+                                  style: AppText.poppins(
+                                    color: const Color(0xFF6B7280),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ).animate().fadeIn(duration: 600.ms, delay: 400.ms),
+
+                        const SizedBox(height: 24),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'By continuing, you agree to our ',
+                              textAlign: TextAlign.center,
+                              style: AppText.poppins(
+                                color: Colors.white.withOpacity(0.65),
+                                fontSize: 12,
+                                height: 1.5,
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
+                            GestureDetector(
+                              onTap: () {
+                                Get.to(
+                                  () => const TermsConditionsPage(),
+                                  transition: Transition.rightToLeftWithFade,
+                                  duration: const Duration(milliseconds: 400),
+                                );
+                              },
                               child: Text(
-                                'Your data is secure and encrypted',
+                                'Terms & Conditions',
+                                textAlign: TextAlign.center,
                                 style: AppText.poppins(
-                                  color: const Color(0xFF6B7280),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF64B5F6),
+                                  fontSize: 12,
+                                  height: 1.5,
+                                  fontWeight: FontWeight.w600,
+                                  decoration: TextDecoration.underline,
                                 ),
                               ),
                             ),
                           ],
-                        ),
-                      ).animate().fadeIn(duration: 600.ms, delay: 400.ms),
+                        ).animate().fadeIn(duration: 600.ms, delay: 500.ms),
 
-                      const SizedBox(height: 24),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'By continuing, you agree to our ',
-                            textAlign: TextAlign.center,
-                            style: AppText.poppins(
-                              color: const Color(0xFF9CA3AF),
-                              fontSize: 12,
-                              height: 1.5,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              Get.to(
-                                () => const TermsConditionsPage(),
-                                transition: Transition.rightToLeftWithFade,
-                                duration: const Duration(milliseconds: 400),
-                              );
-                            },
-                            child: Text(
-                              'Terms & Conditions',
-                              textAlign: TextAlign.center,
-                              style: AppText.poppins(
-                                color: const Color(0xFF64B5F6),
-                                fontSize: 12,
-                                height: 1.5,
-                                fontWeight: FontWeight.w600,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ).animate().fadeIn(duration: 600.ms, delay: 500.ms),
-
-                      SizedBox(height: isShortScreen ? 20 : 40),
-                    ],
+                        SizedBox(height: isShortScreen ? 20 : 40),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -336,7 +392,8 @@ class LoginSelectionPage extends StatelessWidget {
 
   Widget _buildModernOption({
     required BuildContext context,
-    required IconData icon,
+    IconData? icon,
+    String? imagePath,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
@@ -394,11 +451,21 @@ class LoginSelectionPage extends StatelessWidget {
                       width: 1,
                     ),
                   ),
-                  child: Icon(
-                    icon,
-                    color: Colors.white,
-                    size: iconSize,
-                  ),
+                  child: imagePath != null
+                      ? Padding(
+                          padding: EdgeInsets.all(iconContainerSize * 0.2),
+                          child: Image.asset(
+                            imagePath,
+                            width: iconSize,
+                            height: iconSize,
+                            fit: BoxFit.contain,
+                          ),
+                        )
+                      : Icon(
+                          icon!,
+                          color: Colors.white,
+                          size: iconSize,
+                        ),
                 ),
                 SizedBox(width: isCompact ? 14 : 20),
                 Expanded(

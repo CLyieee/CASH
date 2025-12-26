@@ -461,17 +461,26 @@ class _DashboardPageState extends State<DashboardPage> {
                                                           width: isHeroCompact
                                                               ? 8
                                                               : 12),
-                                                      Text(
-                                                        'Total Balance',
-                                                        style: AppText.poppins(
-                                                          color: Colors.white
-                                                              .withOpacity(0.9),
-                                                          fontSize:
-                                                              labelFontSize,
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                        ),
-                                                      ),
+                                                      Obx(() => Text(
+                                                            dashController
+                                                                        .viewMode
+                                                                        .value ==
+                                                                    'Daily'
+                                                                ? 'Today\'s Balance'
+                                                                : 'Total Balance',
+                                                            style:
+                                                                AppText.poppins(
+                                                              color: Colors
+                                                                  .white
+                                                                  .withOpacity(
+                                                                      0.9),
+                                                              fontSize:
+                                                                  labelFontSize,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w500,
+                                                            ),
+                                                          )),
                                                     ],
                                                   ),
                                                 ),
@@ -582,9 +591,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                             Obx(() {
                                               final totalBalance =
                                                   dashController
-                                                          .totalCashIn.value +
-                                                      dashController
-                                                          .totalCashOut.value;
+                                                      .displayedBalance;
                                               return Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
@@ -610,73 +617,6 @@ class _DashboardPageState extends State<DashboardPage> {
                                                       ),
                                                     ),
                                                   ),
-                                                  SizedBox(
-                                                      height: isHeroCompact
-                                                          ? 12
-                                                          : 16),
-                                                  // Available funds row
-                                                  Container(
-                                                    padding:
-                                                        EdgeInsets.symmetric(
-                                                            horizontal:
-                                                                isHeroCompact
-                                                                    ? 10
-                                                                    : 14,
-                                                            vertical:
-                                                                isHeroCompact
-                                                                    ? 8
-                                                                    : 10),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.white
-                                                          .withOpacity(0.12),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              14),
-                                                    ),
-                                                    child: Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        Icon(
-                                                          Icons
-                                                              .savings_outlined,
-                                                          color: Colors.white
-                                                              .withOpacity(0.9),
-                                                          size: isHeroCompact
-                                                              ? 16
-                                                              : 18,
-                                                        ),
-                                                        SizedBox(
-                                                            width: isHeroCompact
-                                                                ? 8
-                                                                : 10),
-                                                        Flexible(
-                                                          child: Text(
-                                                            _isBalanceVisible
-                                                                ? 'Available: ${currencyFormat.format(dashController.availableFunds.value)}'
-                                                                : 'Available: ₱ ••••••',
-                                                            style:
-                                                                AppText.poppins(
-                                                              color: Colors
-                                                                  .white
-                                                                  .withOpacity(
-                                                                      0.95),
-                                                              fontSize:
-                                                                  isHeroCompact
-                                                                      ? 11
-                                                                      : 13,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w500,
-                                                            ),
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
                                                 ],
                                               );
                                             }),
@@ -695,13 +635,38 @@ class _DashboardPageState extends State<DashboardPage> {
 
                           const SizedBox(height: 24),
 
+                          // View Mode Selector (Daily / Overall)
+                          Obx(() => Center(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: palette.surfaceContainer,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                            color: palette.cardBorder),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          _buildViewModeTab('Daily', palette),
+                                          const SizedBox(width: 4),
+                                          _buildViewModeTab('Overall', palette),
+                                        ],
+                                      ),
+                                    ),
+                                  ))
+                              .animate(delay: 150.ms)
+                              .fadeIn(duration: 400.ms),
+
+                          const SizedBox(height: 24),
+
                           // M3 Quick Stats Grid
                           Obx(() {
                             final stats = [
                               {
                                 'label': 'Cash In',
                                 'value': currencyFormat
-                                    .format(dashController.totalCashIn.value),
+                                    .format(dashController.displayedCashIn),
                                 'icon': Icons.south_west_rounded,
                                 'color': const Color(0xFF16A34A),
                                 'bgColor': palette.isDark
@@ -711,7 +676,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               {
                                 'label': 'Cash Out',
                                 'value': currencyFormat
-                                    .format(dashController.totalCashOut.value),
+                                    .format(dashController.displayedCashOut),
                                 'icon': Icons.north_east_rounded,
                                 'color': const Color(0xFFEA580C),
                                 'bgColor': palette.isDark
@@ -721,7 +686,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               {
                                 'label': 'Load',
                                 'value': currencyFormat
-                                    .format(dashController.totalLoad.value),
+                                    .format(dashController.displayedLoad),
                                 'icon': Icons.phone_android_rounded,
                                 'color': const Color(0xFF10B981),
                                 'bgColor': palette.isDark
@@ -729,9 +694,9 @@ class _DashboardPageState extends State<DashboardPage> {
                                     : const Color(0xFFD1FAE5),
                               },
                               {
-                                'label': 'Fees (Incl.)',
+                                'label': 'Charges (Incl.)',
                                 'value': currencyFormat
-                                    .format(dashController.totalFees.value),
+                                    .format(dashController.displayedFees),
                                 'icon': Icons.receipt_long_rounded,
                                 'color': const Color(0xFF2563EB),
                                 'bgColor': palette.isDark
@@ -739,9 +704,9 @@ class _DashboardPageState extends State<DashboardPage> {
                                     : const Color(0xFFDBEAFE),
                               },
                               {
-                                'label': 'Fees (Cash)',
+                                'label': 'Charges (Cash)',
                                 'value': currencyFormat.format(
-                                    dashController.totalSeparateFees.value),
+                                    dashController.displayedSeparateFees),
                                 'icon': Icons.payments_rounded,
                                 'color': const Color(0xFF9333EA),
                                 'bgColor': palette.isDark
@@ -751,7 +716,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               {
                                 'label': 'Transactions',
                                 'value':
-                                    '${dashController.totalTransactions.value}',
+                                    '${dashController.displayedTransactions}',
                                 'icon': Icons.swap_horiz_rounded,
                                 'color': const Color(0xFF0891B2),
                                 'bgColor': palette.isDark
@@ -793,117 +758,6 @@ class _DashboardPageState extends State<DashboardPage> {
                           }),
 
                           const SizedBox(height: 28),
-
-                          // Analytics Insights Section
-                          Obx(() {
-                            final transactions =
-                                dashController.recentTransactions;
-                            if (transactions.isEmpty)
-                              return const SizedBox.shrink();
-
-                            // Calculate analytics
-                            final avgTransaction = transactions.isNotEmpty
-                                ? transactions.fold<double>(
-                                        0, (sum, t) => sum + t.amount) /
-                                    transactions.length
-                                : 0.0;
-
-                            final largest = transactions
-                                .reduce((a, b) => a.amount > b.amount ? a : b);
-
-                            // Top recipient
-                            final recipientCounts = <String, int>{};
-                            final recipientTotals = <String, double>{};
-                            for (final tx in transactions) {
-                              recipientCounts[tx.recipientName] =
-                                  (recipientCounts[tx.recipientName] ?? 0) + 1;
-                              recipientTotals[tx.recipientName] =
-                                  (recipientTotals[tx.recipientName] ?? 0) +
-                                      tx.amount;
-                            }
-                            final topRecipient = recipientCounts.entries
-                                .reduce((a, b) => a.value > b.value ? a : b);
-
-                            return LayoutBuilder(
-                              builder: (context, constraints) {
-                                final screenWidth =
-                                    MediaQuery.of(context).size.width;
-                                final isCompact = screenWidth < 360;
-                                final titleSize = isCompact ? 16.0 : 18.0;
-                                final subtitleSize = isCompact ? 11.0 : 12.0;
-
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Financial Insights',
-                                      style: AppText.poppins(
-                                        color: palette.textPrimary,
-                                        fontSize: titleSize,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Based on your transaction data',
-                                      style: AppText.poppins(
-                                        color: palette.textSecondary,
-                                        fontSize: subtitleSize,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-
-                                    // Insights Grid - Adaptive layout
-                                    Column(
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: _buildInsightCard(
-                                                'Average Transaction',
-                                                currencyFormat
-                                                    .format(avgTransaction),
-                                                Icons.analytics_outlined,
-                                                const Color(0xFF9C27B0),
-                                                palette,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: _buildInsightCard(
-                                                'Top Recipient',
-                                                topRecipient.key,
-                                                Icons.person_outline,
-                                                const Color(0xFF2196F3),
-                                                palette,
-                                                subtitle:
-                                                    '${topRecipient.value} transactions',
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 12),
-                                        // Full width for single card
-                                        _buildInsightCard(
-                                          'Largest Transaction',
-                                          currencyFormat.format(largest.amount),
-                                          Icons.trending_up,
-                                          const Color(0xFFFF5722),
-                                          palette,
-                                          subtitle: largest.recipientName,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                );
-                              },
-                            )
-                                .animate(delay: 250.ms)
-                                .fadeIn(duration: 400.ms)
-                                .slideY(begin: 0.2, end: 0);
-                          }),
-
-                          const SizedBox(height: 25),
 
                           // Earnings Chart Card
                           LayoutBuilder(
@@ -1024,8 +878,6 @@ class _DashboardPageState extends State<DashboardPage> {
                           // Fee Charts - Single Card with Horizontal Scrollable Content
                           LayoutBuilder(
                             builder: (context, constraints) {
-                              final screenWidth =
-                                  MediaQuery.of(context).size.width;
                               final scrollController = ScrollController();
                               final currentPage = 0.obs;
 
@@ -1037,70 +889,204 @@ class _DashboardPageState extends State<DashboardPage> {
                                 }
                               });
 
-                              return Container(
-                                width: screenWidth - 40,
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: palette.cardSurface,
-                                  borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(color: palette.cardBorder),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: palette.shadowDark,
-                                      offset: const Offset(2, 2),
-                                      blurRadius: 10,
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Fee Analysis',
-                                      style: AppText.poppins(
-                                        color: palette.textPrimary,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                              return Center(
+                                child: Container(
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 400),
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: palette.cardSurface,
+                                    borderRadius: BorderRadius.circular(24),
+                                    border:
+                                        Border.all(color: palette.cardBorder),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: palette.shadowDark,
+                                        offset: const Offset(2, 2),
+                                        blurRadius: 10,
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Swipe to view different breakdowns',
-                                      style: AppText.poppins(
-                                        color: palette.textSecondary,
-                                        fontSize: 12,
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Charge Analysis',
+                                        style: AppText.poppins(
+                                          color: palette.textPrimary,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    SizedBox(
-                                      height: 320,
-                                      child: ListView(
-                                        controller: scrollController,
-                                        scrollDirection: Axis.horizontal,
-                                        children: [
-                                          // Fee Payment Types Chart
-                                          Obx(() {
-                                            final includedFees =
-                                                dashController.totalFees.value;
-                                            final separateFees = dashController
-                                                .totalSeparateFees.value;
-                                            final totalAllFees =
-                                                includedFees + separateFees;
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Swipe to view different breakdowns',
+                                        style: AppText.poppins(
+                                          color: palette.textSecondary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      SizedBox(
+                                        height: 320,
+                                        child: ListView(
+                                          controller: scrollController,
+                                          scrollDirection: Axis.horizontal,
+                                          children: [
+                                            // Fee Payment Types Chart
+                                            Obx(() {
+                                              final includedFees =
+                                                  dashController
+                                                      .totalFees.value;
+                                              final separateFees =
+                                                  dashController
+                                                      .totalSeparateFees.value;
+                                              final totalAllFees =
+                                                  includedFees + separateFees;
 
-                                            if (totalAllFees == 0) {
-                                              return const SizedBox.shrink();
-                                            }
+                                              if (totalAllFees == 0) {
+                                                return const SizedBox.shrink();
+                                              }
 
-                                            return Container(
+                                              return Container(
+                                                width: 280,
+                                                margin: const EdgeInsets.only(
+                                                    right: 24),
+                                                child: Column(
+                                                  children: [
+                                                    Text(
+                                                      'Payment Types',
+                                                      style: AppText.poppins(
+                                                        color:
+                                                            palette.textPrimary,
+                                                        fontSize: 14,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      'Included vs Cash',
+                                                      style: AppText.poppins(
+                                                        color: palette
+                                                            .textSecondary,
+                                                        fontSize: 11,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    SizedBox(
+                                                      height: 180,
+                                                      width: 180,
+                                                      child: Stack(
+                                                        children: [
+                                                          CustomPaint(
+                                                            size: const Size(
+                                                                180, 180),
+                                                            painter:
+                                                                _FeeComparisonChartPainter(
+                                                              includedFees:
+                                                                  includedFees,
+                                                              separateFees:
+                                                                  separateFees,
+                                                              isDark: palette
+                                                                  .isDark,
+                                                            ),
+                                                          ),
+                                                          Center(
+                                                            child: Container(
+                                                              width: 100,
+                                                              height: 100,
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color: palette
+                                                                    .cardSurface,
+                                                                shape: BoxShape
+                                                                    .circle,
+                                                              ),
+                                                              child: Center(
+                                                                child: Column(
+                                                                  mainAxisAlignment:
+                                                                      MainAxisAlignment
+                                                                          .center,
+                                                                  children: [
+                                                                    Text(
+                                                                      'Total',
+                                                                      style: AppText
+                                                                          .poppins(
+                                                                        color: palette
+                                                                            .textSecondary,
+                                                                        fontSize:
+                                                                            10,
+                                                                        fontWeight:
+                                                                            FontWeight.w500,
+                                                                      ),
+                                                                    ),
+                                                                    const SizedBox(
+                                                                        height:
+                                                                            2),
+                                                                    Text(
+                                                                      currencyFormat
+                                                                          .format(
+                                                                              totalAllFees),
+                                                                      style: AppText
+                                                                          .poppins(
+                                                                        color: palette
+                                                                            .textPrimary,
+                                                                        fontSize:
+                                                                            14,
+                                                                        fontWeight:
+                                                                            FontWeight.bold,
+                                                                      ),
+                                                                      textAlign:
+                                                                          TextAlign
+                                                                              .center,
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    Wrap(
+                                                      spacing: 12,
+                                                      runSpacing: 8,
+                                                      alignment:
+                                                          WrapAlignment.center,
+                                                      children: [
+                                                        _buildLegend(
+                                                          'Included',
+                                                          const Color(
+                                                              0xFF64B5F6),
+                                                          currencyFormat.format(
+                                                              includedFees),
+                                                        ),
+                                                        _buildLegend(
+                                                          'Cash',
+                                                          const Color(
+                                                              0xFF9C27B0),
+                                                          currencyFormat.format(
+                                                              separateFees),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }),
+
+                                            // Fees Breakdown Chart
+                                            Container(
                                               width: 280,
                                               margin: const EdgeInsets.only(
                                                   right: 24),
                                               child: Column(
                                                 children: [
                                                   Text(
-                                                    'Payment Types',
+                                                    'Charges by Source',
                                                     style: AppText.poppins(
                                                       color:
                                                           palette.textPrimary,
@@ -1111,7 +1097,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                                   ),
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    'Included vs Cash',
+                                                    'Transaction sources',
                                                     style: AppText.poppins(
                                                       color:
                                                           palette.textSecondary,
@@ -1119,300 +1105,182 @@ class _DashboardPageState extends State<DashboardPage> {
                                                     ),
                                                   ),
                                                   const SizedBox(height: 16),
-                                                  SizedBox(
-                                                    height: 180,
-                                                    width: 180,
-                                                    child: Stack(
+                                                  Obx(() {
+                                                    final breakdown = Map<
+                                                            String,
+                                                            double>.from(
+                                                        dashController
+                                                            .feeBreakdown);
+                                                    final total = breakdown
+                                                        .values
+                                                        .fold<double>(
+                                                      0.0,
+                                                      (sum, value) =>
+                                                          sum + value,
+                                                    );
+
+                                                    return Column(
                                                       children: [
-                                                        CustomPaint(
-                                                          size: const Size(
-                                                              180, 180),
-                                                          painter:
-                                                              _FeeComparisonChartPainter(
-                                                            includedFees:
-                                                                includedFees,
-                                                            separateFees:
-                                                                separateFees,
-                                                            isDark:
-                                                                palette.isDark,
-                                                          ),
-                                                        ),
-                                                        Center(
-                                                          child: Container(
-                                                            width: 100,
-                                                            height: 100,
-                                                            decoration:
-                                                                BoxDecoration(
-                                                              color: palette
-                                                                  .cardSurface,
-                                                              shape: BoxShape
-                                                                  .circle,
-                                                            ),
-                                                            child: Center(
-                                                              child: Column(
-                                                                mainAxisAlignment:
-                                                                    MainAxisAlignment
-                                                                        .center,
-                                                                children: [
-                                                                  Text(
-                                                                    'Total',
-                                                                    style: AppText
-                                                                        .poppins(
-                                                                      color: palette
-                                                                          .textSecondary,
-                                                                      fontSize:
-                                                                          10,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w500,
-                                                                    ),
-                                                                  ),
-                                                                  const SizedBox(
-                                                                      height:
-                                                                          2),
-                                                                  Text(
-                                                                    currencyFormat
-                                                                        .format(
-                                                                            totalAllFees),
-                                                                    style: AppText
-                                                                        .poppins(
-                                                                      color: palette
-                                                                          .textPrimary,
-                                                                      fontSize:
-                                                                          14,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .bold,
-                                                                    ),
-                                                                    textAlign:
-                                                                        TextAlign
-                                                                            .center,
-                                                                  ),
-                                                                ],
+                                                        SizedBox(
+                                                          height: 180,
+                                                          width: 180,
+                                                          child: Stack(
+                                                            children: [
+                                                              CustomPaint(
+                                                                size:
+                                                                    const Size(
+                                                                        180,
+                                                                        180),
+                                                                painter:
+                                                                    DonutChartPainter(
+                                                                  sourceBreakdown:
+                                                                      breakdown,
+                                                                ),
                                                               ),
-                                                            ),
+                                                              Center(
+                                                                child:
+                                                                    Container(
+                                                                  width: 100,
+                                                                  height: 100,
+                                                                  decoration:
+                                                                      BoxDecoration(
+                                                                    color: palette
+                                                                        .cardSurface,
+                                                                    shape: BoxShape
+                                                                        .circle,
+                                                                  ),
+                                                                  child: Center(
+                                                                    child:
+                                                                        Column(
+                                                                      mainAxisAlignment:
+                                                                          MainAxisAlignment
+                                                                              .center,
+                                                                      children: [
+                                                                        Text(
+                                                                          'Total',
+                                                                          style:
+                                                                              AppText.poppins(
+                                                                            color:
+                                                                                palette.textSecondary,
+                                                                            fontSize:
+                                                                                10,
+                                                                            fontWeight:
+                                                                                FontWeight.w500,
+                                                                          ),
+                                                                        ),
+                                                                        const SizedBox(
+                                                                            height:
+                                                                                2),
+                                                                        Text(
+                                                                          currencyFormat
+                                                                              .format(total),
+                                                                          style:
+                                                                              AppText.poppins(
+                                                                            color:
+                                                                                palette.textPrimary,
+                                                                            fontSize:
+                                                                                14,
+                                                                            fontWeight:
+                                                                                FontWeight.bold,
+                                                                          ),
+                                                                          textAlign:
+                                                                              TextAlign.center,
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ],
                                                           ),
                                                         ),
+                                                        const SizedBox(
+                                                            height: 16),
+                                                        if (dashController
+                                                            .feeBreakdown
+                                                            .isEmpty)
+                                                          Text(
+                                                            'No charge data yet',
+                                                            style:
+                                                                AppText.poppins(
+                                                              color: palette
+                                                                  .textSecondary,
+                                                              fontSize: 11,
+                                                            ),
+                                                          )
+                                                        else
+                                                          Wrap(
+                                                            spacing: 12,
+                                                            runSpacing: 8,
+                                                            alignment:
+                                                                WrapAlignment
+                                                                    .center,
+                                                            children:
+                                                                dashController
+                                                                    .feeBreakdown
+                                                                    .entries
+                                                                    .toList()
+                                                                    .asMap()
+                                                                    .entries
+                                                                    .map(
+                                                                        (entry) {
+                                                              final index =
+                                                                  entry.key;
+                                                              final source =
+                                                                  entry.value;
+                                                              return _buildLegend(
+                                                                source.key,
+                                                                DonutChartPainter
+                                                                    .getColorForSource(
+                                                                  source.key,
+                                                                  index,
+                                                                ),
+                                                                currencyFormat
+                                                                    .format(source
+                                                                        .value),
+                                                              );
+                                                            }).toList(),
+                                                          ),
                                                       ],
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 16),
-                                                  Wrap(
-                                                    spacing: 12,
-                                                    runSpacing: 8,
-                                                    alignment:
-                                                        WrapAlignment.center,
-                                                    children: [
-                                                      _buildLegend(
-                                                        'Included',
-                                                        const Color(0xFF64B5F6),
-                                                        currencyFormat.format(
-                                                            includedFees),
-                                                      ),
-                                                      _buildLegend(
-                                                        'Cash',
-                                                        const Color(0xFF9C27B0),
-                                                        currencyFormat.format(
-                                                            separateFees),
-                                                      ),
-                                                    ],
-                                                  ),
+                                                    );
+                                                  }),
                                                 ],
                                               ),
-                                            );
-                                          }),
-
-                                          // Fees Breakdown Chart
-                                          Container(
-                                            width: 280,
-                                            margin: const EdgeInsets.only(
-                                                right: 24),
-                                            child: Column(
-                                              children: [
-                                                Text(
-                                                  'Fees by Source',
-                                                  style: AppText.poppins(
-                                                    color: palette.textPrimary,
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'Transaction sources',
-                                                  style: AppText.poppins(
-                                                    color:
-                                                        palette.textSecondary,
-                                                    fontSize: 11,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 16),
-                                                Obx(() {
-                                                  final breakdown =
-                                                      Map<String, double>.from(
-                                                          dashController
-                                                              .feeBreakdown);
-                                                  final total = breakdown.values
-                                                      .fold(
-                                                          0.0,
-                                                          (sum, value) =>
-                                                              sum + value);
-
-                                                  return Column(
-                                                    children: [
-                                                      SizedBox(
-                                                        height: 180,
-                                                        width: 180,
-                                                        child: Stack(
-                                                          children: [
-                                                            CustomPaint(
-                                                              size: const Size(
-                                                                  180, 180),
-                                                              painter:
-                                                                  DonutChartPainter(
-                                                                sourceBreakdown:
-                                                                    breakdown,
-                                                              ),
-                                                            ),
-                                                            Center(
-                                                              child: Container(
-                                                                width: 100,
-                                                                height: 100,
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  color: palette
-                                                                      .cardSurface,
-                                                                  shape: BoxShape
-                                                                      .circle,
-                                                                ),
-                                                                child: Center(
-                                                                  child: Column(
-                                                                    mainAxisAlignment:
-                                                                        MainAxisAlignment
-                                                                            .center,
-                                                                    children: [
-                                                                      Text(
-                                                                        'Total',
-                                                                        style: AppText
-                                                                            .poppins(
-                                                                          color:
-                                                                              palette.textSecondary,
-                                                                          fontSize:
-                                                                              10,
-                                                                          fontWeight:
-                                                                              FontWeight.w500,
-                                                                        ),
-                                                                      ),
-                                                                      const SizedBox(
-                                                                          height:
-                                                                              2),
-                                                                      Text(
-                                                                        currencyFormat
-                                                                            .format(total),
-                                                                        style: AppText
-                                                                            .poppins(
-                                                                          color:
-                                                                              palette.textPrimary,
-                                                                          fontSize:
-                                                                              14,
-                                                                          fontWeight:
-                                                                              FontWeight.bold,
-                                                                        ),
-                                                                        textAlign:
-                                                                            TextAlign.center,
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      const SizedBox(
-                                                          height: 16),
-                                                      if (dashController
-                                                          .feeBreakdown.isEmpty)
-                                                        Text(
-                                                          'No fee data yet',
-                                                          style:
-                                                              AppText.poppins(
-                                                            color: palette
-                                                                .textSecondary,
-                                                            fontSize: 11,
-                                                          ),
-                                                        )
-                                                      else
-                                                        Wrap(
-                                                          spacing: 12,
-                                                          runSpacing: 8,
-                                                          alignment:
-                                                              WrapAlignment
-                                                                  .center,
-                                                          children:
-                                                              dashController
-                                                                  .feeBreakdown
-                                                                  .entries
-                                                                  .toList()
-                                                                  .asMap()
-                                                                  .entries
-                                                                  .map((entry) {
-                                                            final index =
-                                                                entry.key;
-                                                            final source =
-                                                                entry.value;
-                                                            return _buildLegend(
-                                                              source.key,
-                                                              DonutChartPainter
-                                                                  .getColorForSource(
-                                                                      source
-                                                                          .key,
-                                                                      index),
-                                                              currencyFormat
-                                                                  .format(source
-                                                                      .value),
-                                                            );
-                                                          }).toList(),
-                                                        ),
-                                                    ],
-                                                  );
-                                                }),
-                                              ],
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    // Dot Indicators
-                                    Center(
-                                      child: Obx(() => Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: List.generate(2, (index) {
-                                              final isActive =
-                                                  currentPage.value == index;
-                                              return AnimatedContainer(
-                                                duration: const Duration(
-                                                    milliseconds: 300),
-                                                margin:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 4),
-                                                width: isActive ? 24 : 8,
-                                                height: 8,
-                                                decoration: BoxDecoration(
-                                                  color: isActive
-                                                      ? palette.accentBlue
-                                                      : palette.textSecondary
-                                                          .withOpacity(0.3),
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                ),
-                                              );
-                                            }),
-                                          )),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 16),
+                                      Center(
+                                        child: Obx(() => Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children:
+                                                  List.generate(2, (index) {
+                                                final isActive =
+                                                    currentPage.value == index;
+                                                return AnimatedContainer(
+                                                  duration: const Duration(
+                                                      milliseconds: 300),
+                                                  margin: const EdgeInsets
+                                                      .symmetric(horizontal: 4),
+                                                  width: isActive ? 24 : 8,
+                                                  height: 8,
+                                                  decoration: BoxDecoration(
+                                                    color: isActive
+                                                        ? palette.accentBlue
+                                                        : palette.textSecondary
+                                                            .withOpacity(0.3),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            4),
+                                                  ),
+                                                );
+                                              }),
+                                            )),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               )
                                   .animate(delay: 350.ms)
@@ -2160,6 +2028,28 @@ class _DashboardPageState extends State<DashboardPage> {
           style: AppText.poppins(
             color: isSelected ? Colors.white : palette.textSecondary,
             fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildViewModeTab(String mode, _DashboardPalette palette) {
+    final isSelected = dashController.viewMode.value == mode;
+    return GestureDetector(
+      onTap: () => dashController.setViewMode(mode),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? palette.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          mode,
+          style: AppText.poppins(
+            color: isSelected ? Colors.white : palette.textSecondary,
+            fontSize: 14,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           ),
         ),

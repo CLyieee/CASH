@@ -486,7 +486,7 @@ class _HistoryPageState extends State<HistoryPage> {
             _buildDetailRow('Phone', transaction.phoneNumber, Icons.phone),
             _buildDetailRow('Amount', currencyFormat.format(transaction.amount),
                 Icons.attach_money),
-            _buildDetailRow('Fee', currencyFormat.format(transaction.fee),
+            _buildDetailRow('Charge', currencyFormat.format(transaction.fee),
                 Icons.receipt_long),
             _buildDetailRow('Total',
                 currencyFormat.format(transaction.totalAmount), Icons.payments),

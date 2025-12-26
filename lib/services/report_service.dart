@@ -39,13 +39,13 @@ class ReportService {
     buffer.writeln('Total Cash In,${currencyFormat.format(summary['cashIn'])}');
     buffer
         .writeln('Total Cash Out,${currencyFormat.format(summary['cashOut'])}');
-    buffer.writeln('Total Fees,${currencyFormat.format(summary['fees'])}');
+    buffer.writeln('Total Charges,${currencyFormat.format(summary['fees'])}');
     buffer.writeln('Net Amount,${currencyFormat.format(summary['net'])}');
     buffer.writeln('');
 
     // Transaction details header
-    buffer
-        .writeln('Date,Time,Type,Recipient,Amount,Fee,Total,Reference,Source');
+    buffer.writeln(
+        'Date,Time,Type,Recipient,Amount,Charge,Total,Reference,Source');
 
     // Transaction data
     for (final tx in transactions) {

@@ -140,7 +140,7 @@ class _LoadReceiptPageState extends State<LoadReceiptPage> {
         refNumber: _referenceNumberController.text.trim(),
         date: _selectedDate,
         source: 'Load',
-        transactionType: 'Cash Out',
+        transactionType: 'Load',
         createdAt: DateTime.now(),
         separateFee: fee,
       );
@@ -196,13 +196,30 @@ class _LoadReceiptPageState extends State<LoadReceiptPage> {
           icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
           onPressed: () => Get.back(),
         ),
-        title: Text(
-          'Load Receipt',
-          style: AppText.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: colorScheme.onSurface,
-          ),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                'Load Receipt',
+                overflow: TextOverflow.ellipsis,
+                style: AppText.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
       body: _isSaving
@@ -422,9 +439,9 @@ class _LoadReceiptPageState extends State<LoadReceiptPage> {
 
                     const SizedBox(height: 24),
 
-                    // Convenience Fee Field
+                    // Convenience Charge Field
                     Text(
-                      'Convenience Fee',
+                      'Convenience Charge',
                       style: AppText.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
