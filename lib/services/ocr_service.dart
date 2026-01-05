@@ -170,7 +170,7 @@ class OCRService {
     }
 
     // Check for price patterns (very strong indicator)
-  final pricePattern = RegExp(r'₱?\s*\d{1,3}(?:,\d{3})*\.\d{2}');
+    final pricePattern = RegExp(r'₱?\s*\d{1,3}(?:,\d{3})*\.\d{2}');
     final priceMatches = pricePattern.allMatches(text).length;
     if (priceMatches >= 2) {
       validationScore += 4;
@@ -1329,9 +1329,9 @@ Just output the raw text content.
     final namePattern = RegExp(r'^[A-Za-z][A-Za-z\s\.\*•\-]{3,30}[A-Za-z\.]$');
 
     for (var line in lines) {
-      // Skip common non-name lines
+      // Skip common non-name lines and service/company names
       if (RegExp(
-              r'(gcash|maya|bank|transfer|amount|fee|total|ref|via|sent|receipt|transaction|service|powered|carbon|digital|instapay|pesonet)',
+              r'(gcash|maya|bank|transfer|amount|fee|total|ref|via|sent|receipt|transaction|service|powered|carbon|digital|instapay|pesonet|express|send|palawan|western|union|moneygram|lbc|mlhuillier|cebuana|money|payment|company)',
               caseSensitive: false)
           .hasMatch(line)) {
         continue;
@@ -1643,9 +1643,10 @@ Just output the raw text content.
       for (var match in matches) {
         final name = match.group(0)!.trim();
         // Validate it's not a false positive and has reasonable length
+        // Expanded exclusion list to filter out service/company names
         if (name.length >= 4 &&
             name.length <= 50 &&
-            !RegExp(r'(GCash|Transfer|Amount|Receipt|Sent|Total|Fee|Ref|Via)',
+            !RegExp(r'(GCash|Transfer|Amount|Receipt|Sent|Total|Fee|Ref|Via|Express|Send|Palawan|Western|Union|MoneyGram|LBC|MLhuillier|Cebuana|Money|Bank|Payment|Service|Company)',
                     caseSensitive: false)
                 .hasMatch(name)) {
           print('✅ Found recipient name (Pattern match): "$name"');
@@ -1675,7 +1676,8 @@ Just output the raw text content.
             if (pattern.hasMatch(prevLine)) {
               final name = pattern.firstMatch(prevLine)!.group(0)!.trim();
               if (name.length >= 4 &&
-                  !RegExp(r'(GCash|Amount|Via)', caseSensitive: false)
+                  !RegExp(r'(GCash|Amount|Via|Express|Send|Palawan|Western|Union|MoneyGram|LBC|MLhuillier|Cebuana|Money|Bank|Payment|Service|Company)',
+                          caseSensitive: false)
                       .hasMatch(name)) {
                 print('✅ Found recipient name (Before phone): "$name"');
                 final normalized = _convertMaskingToBullets(
@@ -1695,7 +1697,8 @@ Just output the raw text content.
             if (pattern.hasMatch(nextLine)) {
               final name = pattern.firstMatch(nextLine)!.group(0)!.trim();
               if (name.length >= 4 &&
-                  !RegExp(r'(GCash|Amount|Via)', caseSensitive: false)
+                  !RegExp(r'(GCash|Amount|Via|Express|Send|Palawan|Western|Union|MoneyGram|LBC|MLhuillier|Cebuana|Money|Bank|Payment|Service|Company)',
+                          caseSensitive: false)
                       .hasMatch(name)) {
                 print('✅ Found recipient name (After phone): "$name"');
                 final normalized = _convertMaskingToBullets(
@@ -1722,7 +1725,8 @@ Just output the raw text content.
       if (match != null && match.groupCount >= 1) {
         final name = match.group(1)!.trim();
         if (name.length >= 4 &&
-            !RegExp(r'(GCash|Amount|Via|Sent)', caseSensitive: false)
+            !RegExp(r'(GCash|Amount|Via|Sent|Express|Send|Palawan|Western|Union|MoneyGram|LBC|MLhuillier|Cebuana|Money|Bank|Payment|Service|Company)',
+                    caseSensitive: false)
                 .hasMatch(name)) {
           print('✅ Found recipient name (Label match): "$name"');
           final normalized =
@@ -1742,7 +1746,8 @@ Just output the raw text content.
     for (var match in fullNameMatches) {
       final name = match.group(0)!.trim();
       // Avoid matching common words and validate reasonable name length
-      if (!RegExp(r'(GCash|Transfer|Amount|Receipt|Sent|Total|Fee|Money|Account|Service|Carbon|Digital|Powered|Via)',
+      // Expanded exclusion list to filter out service/company names
+      if (!RegExp(r'(GCash|Transfer|Amount|Receipt|Sent|Total|Fee|Money|Account|Service|Carbon|Digital|Powered|Via|Express|Send|Palawan|Western|Union|MoneyGram|LBC|MLhuillier|Cebuana|Bank|Payment|Company)',
                   caseSensitive: false)
               .hasMatch(name) &&
           name.length >= 5 &&
@@ -1763,8 +1768,9 @@ Just output the raw text content.
               .hasMatch(line) &&
           line.length >= 4 &&
           line.length <= 20) {
-        // Verify it's not a common word
-        if (!RegExp(r'(GCash|Amount|Via|Sent|Transfer|Fee|Total|Ref)',
+        // Verify it's not a common word or service name
+        if (!RegExp(
+                r'(GCash|Amount|Via|Sent|Transfer|Fee|Total|Ref|Express|Send|Palawan|Western|Union|MoneyGram|LBC|MLhuillier|Cebuana|Money|Bank|Payment|Service|Company)',
                 caseSensitive: false)
             .hasMatch(line)) {
           print('✅ Found recipient name (Line scan): "$line"');
@@ -1782,7 +1788,11 @@ Just output the raw text content.
       final match = capsPattern.firstMatch(beforeAmount);
       if (match != null) {
         final name = match.group(1)!.trim();
-        if (name.length >= 5) {
+        // Filter out service/company names even in last resort
+        if (name.length >= 5 &&
+            !RegExp(r'(GCash|Amount|Via|Sent|Transfer|Fee|Total|Ref|Express|Send|Palawan|Western|Union|MoneyGram|LBC|MLhuillier|Cebuana|Money|Bank|Payment|Service|Company)',
+                    caseSensitive: false)
+                .hasMatch(name)) {
           print('✅ Found recipient name (Near amount): "$name"');
           return name;
         }

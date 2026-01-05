@@ -11,7 +11,7 @@ class AppUpdateService {
   // To get direct download: Right-click MediaFire download button → Copy link address
   // Or use: https://www.mediafire.com/file/54tpdypuidawbwk/app-arm64-v8a-release.apk/file
   static const String _mediaFireLink =
-      'https://www.mediafire.com/file/54tpdypuidawbwk/app-arm64-v8a-release.apk/file';
+      'https://www.mediafire.com/file/efge7e7ntuekbzl/app-arm64-v8a-release.apk/file';
 
   // Alternative: Use direct download URL if you have it
   // MediaFire direct downloads usually look like: https://download[number].mediafire.com/...

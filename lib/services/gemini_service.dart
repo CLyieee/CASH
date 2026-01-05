@@ -516,6 +516,17 @@ Look for text that matches these patterns ANYWHERE in the image:
 - ABBREVIATED: "M. CRUZ", "J. SANTOS", "Maria C."
 - Any combination of letters that looks like a person's name
 
+⚠️ CRITICAL - EXCLUDE THESE (NOT PERSON NAMES):
+DO NOT extract these as recipient names (these are company/service names):
+- "Express Send", "Palawan Express", "Palawan Express Send"
+- "LBC Express", "Western Union", "MoneyGram"
+- "GCash", "Maya", "PayMaya", "BPI", "BDO", "Metrobank"
+- "Send Money", "Money Transfer", "Bank Transfer"
+- "Sent via GCash", "Paid via GCash"
+- Any company or service provider name
+- Any app name or remittance center name
+- Any transaction type description
+
 STEP 3: IDENTIFY CONTEXT CLUES
 Look for labels NEAR the name text:
 - "To:", "Send to:", "Recipient:", "Receiver:", "Beneficiary:"
@@ -529,6 +540,8 @@ STEP 4: VERIFY IT'S A NAME
 - Is it near a phone number or amount? (names usually appear with these)
 - Is it in a recipient/beneficiary context?
 - Is it at the TOP of the receipt? (strong indicator for GCash)
+- Is it NOT a service name like "Express Send" or "Palawan Express"?
+- Is it NOT a company name or app name?
 
 ⚠️ IMPORTANT:
 - For GCash receipts, CHECK TOP SECTION FIRST!
